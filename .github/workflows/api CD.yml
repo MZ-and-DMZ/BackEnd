@@ -13,14 +13,16 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Deploy to EC2
+    - name: Add host key to known_hosts
+      run: ssh-keyscan -H ec2-54-180-76-116.ap-northeast-2.compute.amazonaws.com >> ~/.ssh/known_hosts
+
+    - name: Copy SSH key to EC2
       env:
         EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
-        EC2_HOST: ${{ secrets.EC2_HOST }}
-        EC2_USER: ${{ secrets.EC2_USER }}
       run: |
         echo "$EC2_SSH_KEY" > BE-dev.pem
         chmod 600 BE-dev.pem
-        scp "BE-dev.pem" ec2-user@ec2-54-180-76-116.ap-northeast-2.compute.amazonaws.com:/API/
-        ssh -i "BE-dev.pem" ec2-user@ec2-54-180-76-116.ap-northeast-2.compute.amazonaws.com 'python /API/main.py'
-        rm -f private_key.pem
+        scp -i "BE-dev.pem" "BE-dev.pem" ec2-user@ec2-54-180-76-116.ap-northeast-2.compute.amazonaws.com:/home/ec2-user/
+
+    - name: Deploy to EC2
+      run: ssh -i "/home/ec2-user/BE-dev.pem" ec2-user@ec2-54-180-76-116.ap-northeast-2.compute.amazonaws.com 'python /API/main.py'
