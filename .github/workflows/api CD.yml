@@ -21,8 +21,6 @@ jobs:
       run: |
         echo "$EC2_SSH_KEY" > private_key.pem
         chmod 600 private_key.pem
-        scp -i private_key.pem -o StrictHostKeyChecking=no -r . $EC2_USER@$EC2_HOST:/path/to/deploy/directory
-        # 원한다면 ssh를 사용해 추가 명령어를 EC2에서 실행
-        # 예: 서버 재시작, 종속성 설치 등
-        ssh -i private_key.pem -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST 'your-command-here'
+        scp "BE-dev.pem" ec2-user@ec2-54-180-76-116.ap-northeast-2.compute.amazonaws.com:/API/
+        ssh -i "BE-dev.pem" ec2-user@ec2-54-180-76-116.ap-northeast-2.compute.amazonaws.com 'python /API/main.py'
         rm -f private_key.pem
