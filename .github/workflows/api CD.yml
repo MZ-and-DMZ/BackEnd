@@ -10,19 +10,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
+    - name: Checkout repository
       uses: actions/checkout@v2
 
-    - name: Add host key to known_hosts
-      run: ssh-keyscan -H ec2-54-180-76-116.ap-northeast-2.compute.amazonaws.com >> ~/.ssh/known_hosts
-
-    - name: Copy SSH key to EC2
+    - name: Setup SSH and deploy
       env:
-        EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+        PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        HOST: ${{ secrets.EC2_HOST }}
+        USER: ${{ secrets.EC2_USER }}
       run: |
-        echo "$EC2_SSH_KEY" > BE-dev.pem
-        chmod 600 BE-dev.pem
-        scp -i "BE-dev.pem" "BE-dev.pem" ec2-user@ec2-54-180-76-116.ap-northeast-2.compute.amazonaws.com:/home/ec2-user/
+        # Install SSH client
+        sudo apt-get update
+        sudo apt-get install -y openssh-client
 
-    - name: Deploy to EC2
-      run: ssh -i "/home/ec2-user/BE-dev.pem" ec2-user@ec2-54-180-76-116.ap-northeast-2.compute.amazonaws.com 'python /API/main.py'
+        # Save private key to file
+        echo "$PRIVATE_KEY" > BE-dev.pem
+        chmod 600 BE-dev.pem
+
+        # SSH into the EC2 instance, clone the repo, and run main.py
+        ssh -i BE-dev.pem ec2-user@ec2-54-180-76-116.ap-northeast-2.compute.amazonaws.com <<EOF
+          git clone git@github.com:MZ-and-DMZ/BackEnd.git
+          cd BackEnd
+          python3 main.py
+EOF
