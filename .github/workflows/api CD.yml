@@ -28,7 +28,7 @@ jobs:
         chmod 600 BE-dev.pem
 
         # SSH into the EC2 instance, clone the repo, and run main.py
-        ssh -o StrictHostKeyChecking=no -tt -i BE-dev.pem $USER@$HOST
+        ssh -i BE-dev.pem $USER@$HOST
           git clone git@github.com:MZ-and-DMZ/BackEnd.git
           cd BackEnd
           python3 main.py
