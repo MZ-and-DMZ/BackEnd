@@ -23,12 +23,4 @@ jobs:
         script: |
           cd BackEnd
           git pull
-          killall python3
-          if [ $? -eq 0 ]; then
-            echo "Process killed successfully."
-          else
-            echo "Error: Failed to kill the process."
-            exit 1
-          fi
-            
           python main.py          
