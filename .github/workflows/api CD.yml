@@ -23,4 +23,4 @@ jobs:
         script: |
           cd BackEnd
           git pull
-          python main.py          
+          python main.py &
