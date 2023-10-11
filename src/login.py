@@ -1,6 +1,8 @@
 def auth_user(user, collection):
-    result = collection.find_one({"_id": user.id})
-
+    try:
+        result = collection.find_one({"_id": user.id})
+    except:
+        return "server error"
     if result:
         if result.get("password") == user.pwd:
             return {"result": "success"}
