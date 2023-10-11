@@ -23,4 +23,8 @@ jobs:
         script: |
           cd BackEnd
           git pull
-          python main.py &
+          if sudo netstat -tuln | grep -q ':8080 '; then
+            echo "server reload"
+          else
+            echo "server start"
+            python main.py &
