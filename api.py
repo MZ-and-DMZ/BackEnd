@@ -23,7 +23,7 @@ async def shutdown_event():
 
 @app.get(path="/")
 async def root():
-    return {"message": "Hello, World!"}
+    return {"message": "Hello World!"}
 
 
 # 로그인 API 엔드포인트 정의
