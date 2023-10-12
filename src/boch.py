@@ -4,10 +4,3 @@ def get_boch_user_list(collection):
     except:
         return "server error"
     return result
-
-
-def get_boch_user(collection):
-    try:
-        result = collection.findOne()
-    except:
-        pass
