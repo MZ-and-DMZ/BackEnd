@@ -4,7 +4,7 @@ def get_boch_user_list(collection):
     except Exception as e:
         return {"error": "server error", "detail": str(e)}
 
-    return result
+    return {"user_list": result}
 
 
 def get_boch_position_list(collection):
@@ -13,10 +13,10 @@ def get_boch_position_list(collection):
     except Exception as e:
         return {"error": "server error", "detail": str(e)}
 
-    return result
+    return {"position_list": result}
 
 
-def get_boch_position_by_id(collection, position_id):
+def get_boch_position(collection, position_id):
     try:
         result = collection.find_one({"_id": position_id})
     except Exception as e:
@@ -28,21 +28,23 @@ def get_boch_position_by_id(collection, position_id):
     return result
 
 
-def delete_position_by_id(collection, position_id):
-    try:
-        position = collection.find_one({"_id": position_id})
-    except Exception as e:
-        return {"error": "server error", "detail": str(e)}
-    
-    if position:
-        position_type = position.get("type")
-        if position_type == "pre_define":
-            return {"position_id": position_id, "result": "cannot delete pre-defined position"}
-        else:
-            result = collection.delete_one({"_id": position_id})
-            if result.deleted_count == 1:
-                return {"position_id": position_id, "result": "deleted successfully"}
+def delete_position(collection, position_id_list):
+    result = dict()
+    for position_id in position_id_list:
+        try:
+            position = collection.find_one({"_id": position_id})
+        except Exception as e:
+            return {"error": "server error", "detail": str(e)}
+
+        if position["type"] == "pre_define":
+            result[position_id] = "cannot delete pre-defined position"
+        elif position["type"] == "custom":
+            delete_result = collection.delete_one({"_id": position_id})
+            if delete_result.deleted_count == 1:
+                result[position_id] = "deleted successfully"
             else:
-                return {"position_id": position_id, "result": "deletion failed"}
-    else:
-        return {"position_id": position_id, "result": "position not found"}
+                result[position_id] = "deletion failed"
+        else:
+            result[position_id] = "position not found"
+
+    return result
