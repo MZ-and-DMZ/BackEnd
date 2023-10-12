@@ -28,10 +28,14 @@ async def root():
 # 로그인 API 엔드포인트 정의
 @app.post(path="/login")
 def auth(user: UserAuth):
-    global client
     return login.auth_user(user, client.collection_auth)
 
 
 @app.get(path="/boch/get/userlist")
 def boch_get_user_list():
     return boch.get_boch_user_list(client.collection_users)
+
+
+@app.get(path="/boch/get/positionlist")
+def boch_get_position_list():
+    return boch.get_boch_position_list(client.collection_position)
