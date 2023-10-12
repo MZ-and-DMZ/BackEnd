@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
 from database import db_client
-from model.user_auth import UserAuth
+from model.model import Auth
 from src import boch, login
 from src.config import conf
 
@@ -27,7 +27,7 @@ async def root():
 
 # 로그인 API 엔드포인트 정의
 @app.post(path="/login")
-def auth(user: UserAuth):
+def auth(user: Auth):
     global client
     return login.auth_user(user, client.collection_auth)
 
