@@ -2,7 +2,7 @@ from fastapi import FastAPI
 
 from database import db_client
 from model.user_auth import UserAuth
-from src import boch, login, position
+from src import boch, login
 from src.config import conf
 
 app = FastAPI()
@@ -38,4 +38,4 @@ def boch_get_user_list():
 
 @app.get(path="/boch/get/positionlist")
 def boch_get_position_list():
-    return position.get_boch_position_list(client.collection_position)
+    return boch.get_boch_position_list(client.collection_position)
