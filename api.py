@@ -4,6 +4,7 @@ from database import db_client
 from model.user_auth import UserAuth
 from src import boch, login
 from src.config import conf
+from typing import List
 
 app = FastAPI()
 
@@ -44,3 +45,19 @@ def boch_get_position_list():
 @app.get(path="/boch/get/position/{position_id}")
 def boch_get_position_by_id(position_id: str = Path(..., title="Position ID")):
     return boch.get_boch_position_by_id(client.collection_position, position_id)
+
+
+@app.delete(path="/boch/delete/position")
+def delete_positions(position_id_list: List[str]):
+    deleted_positions = []
+    failed_deletions = []
+
+    for position_id in position_id_list:
+        result = boch.delete_position_by_id(client.collection_position, position_id)
+        if result["result"] == "deleted successfully":
+            deleted_positions.append(result)
+        else:
+            failed_deletions.append(result)
+
+    response_data = {"deleted_positions": deleted_positions, "failed_delections": failed_deletions}
+    return response_data
