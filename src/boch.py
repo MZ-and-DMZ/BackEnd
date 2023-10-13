@@ -28,23 +28,56 @@ def get_boch_position(collection, position_id):
     return result
 
 
+# 직무 삭제하기
 def delete_position(collection, position_id_list):
     result = dict()
     for position_id in position_id_list:
         try:
             position = collection.find_one({"_id": position_id})
+
+            if position is None:
+                result[position_id] = "position not found"
+                continue
         except Exception as e:
             return {"error": "server error", "detail": str(e)}
 
+        # 직무 타입이 pre-define일 경우
         if position["type"] == "pre_define":
             result[position_id] = "cannot delete pre-defined position"
-        elif position["type"] == "custom":
+        else:
             delete_result = collection.delete_one({"_id": position_id})
             if delete_result.deleted_count == 1:
                 result[position_id] = "deleted successfully"
             else:
                 result[position_id] = "deletion failed"
-        else:
-            result[position_id] = "position not found"
 
     return result
+
+
+# 직무 생성하기
+def create_position(position, collection):
+    # 직무 이름을 입력하지 않을 경우
+    if not position.position_name.strip():
+        return {"result": "position name is required"}
+
+    # 직무 타입이 custom이 아닌 경우
+    if position.type != "custom":
+        return {"result": "position type must be 'custom'"}
+
+    new_position = {
+        "_id": position.position_name,
+        "type": position.type,
+        "description": position.description,
+        "aws_policies": position.aws_policies,
+        "gcp_policies": position.gcp_policies
+    }
+
+    try:
+        result = collection.insert_one(new_position)
+    except Exception as e:
+        return {"error": "server error", "detail": str(e)}
+
+    if result.acknowledged:
+        return {"result": f"{str(result.inserted_id)} created successfully"}
+    else:
+        return {"result": "failed to create position"}
