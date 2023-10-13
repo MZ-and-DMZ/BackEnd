@@ -3,7 +3,7 @@ from typing import List
 from fastapi import FastAPI, Path
 
 from database import db_client
-from model.model import Auth
+from model.model import Auth, Position
 from src import boch, login
 from src.config import conf
 
@@ -29,7 +29,6 @@ async def root():
 
 @app.post(path="/login")
 def auth(user: Auth):
-    global client
     return login.auth_user(user, client.collection_auth)
 
 
@@ -51,3 +50,8 @@ def boch_get_position(position_id: str = Path(..., title="Position ID")):
 @app.delete(path="/boch/delete/position")
 def delete_positions(position_id_list: List[str]):
     return boch.delete_position(client.collection_position, position_id_list)
+
+
+@app.post(path="/boch/create/position")
+def create_position(position: Position):
+    return boch.create_position(position, client.collection_position)

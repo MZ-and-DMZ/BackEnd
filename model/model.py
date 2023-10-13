@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import List
 
 
 class Auth(BaseModel):
@@ -8,10 +9,10 @@ class Auth(BaseModel):
 
 class Position(BaseModel):
     position_name: str
-    type: str
+    type: str = "custom"
     description: str
-    aws_policies: list
-    gcp_policies: list
+    aws_policies: List[str]
+    gcp_policies: List[str]
 
 
 class Users(BaseModel):
