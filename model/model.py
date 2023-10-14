@@ -7,7 +7,7 @@ class Auth(BaseModel):
 
 
 class Position(BaseModel):
-    position_name: str
+    position_id: str
     type: str
     description: str
     aws_policies: list
@@ -15,7 +15,7 @@ class Position(BaseModel):
 
 
 class Users(BaseModel):
-    username: str
+    user_id: str
     description: str
     aws_account: str
     gcp_account: str
