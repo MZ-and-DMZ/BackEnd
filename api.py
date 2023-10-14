@@ -71,3 +71,8 @@ def boch_get_position(position_id: str = Path(..., title="Position ID")):
 @app.delete(path="/boch/delete/position")
 def delete_positions(position_id_list: List[str]):
     return boch.delete_position(client.collection_position, position_id_list)
+
+
+@app.post(path="/boch/create/position")
+def create_position(position: model.Position):
+    return boch.create_position(position, client.collection_position)
