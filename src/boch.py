@@ -20,7 +20,7 @@ def get_boch_user(collection, user_id):
 
 
 def create_boch_user(collection, user_data):
-    new_user = {
+    user_schema = {
         "_id": user_data.user_id,
         "description": user_data.description,
         "aws_account": user_data.aws_account,
@@ -31,7 +31,7 @@ def create_boch_user(collection, user_data):
     }
 
     try:
-        result = collection.insert_one(new_user)
+        result = collection.insert_one(user_schema)
     except Exception as e:
         return {"error": "server error", "detail": str(e)}
 
@@ -42,7 +42,21 @@ def create_boch_user(collection, user_data):
 
 
 def update_boch_user(collection, user_data):
-    pass
+    user_schema = {
+        "_id": user_data.user_id,
+        "description": user_data.description,
+        "aws_account": user_data.aws_account,
+        "gcp_account": user_data.gcp_account,
+        "attached_position": user_data.attached_position,
+        "attached_group": user_data.attached_group,
+        "updatetime": user_data.updatetime,
+    }
+
+    result = collection.update_one({"_id": {user_schema["_id"]}}, {"$set": user_schema})
+    if result.matched_count == 0:
+        print("user not found")
+    else:
+        print("user update success")
 
 
 def delete_boch_user(collection, user_id_list):
