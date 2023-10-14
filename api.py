@@ -48,6 +48,16 @@ def boch_create_user(user_data: model.Users):
     return boch.create_boch_user(client.collection_users, user_data)
 
 
+@app.put(path="/boch/update/user")
+def boch_update_user(user_data: model.Users):
+    return boch.update_boch_user(client.collection_users, user_data)
+
+
+@app.delete(path="/boch/delete/user")
+def boch_delete_user(user_id_list: List[str]):
+    return boch.delete_boch_user(client.collection_users, user_id_list)
+
+
 @app.get(path="/boch/get/positionlist")
 def boch_get_position_list():
     return boch.get_boch_position_list(client.collection_position)
