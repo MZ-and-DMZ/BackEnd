@@ -16,7 +16,7 @@ class Position(BaseModel):
 
 
 class Users(BaseModel):
-    username: str
+    user_id: str
     description: str
     aws_account: str
     gcp_account: str
