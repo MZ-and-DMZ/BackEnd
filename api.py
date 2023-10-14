@@ -74,8 +74,9 @@ def create_position(position: model.Position):
 
 
 @app.put(path="/boch/update/position/{position_id}")
-def update_position(position: Position,
-                    position_id: str = Path(..., title="Position ID")):
+def update_position(
+    position: model.Position, position_id: str = Path(..., title="Position ID")
+):
     return boch.update_position(position_id, position, client.collection_position)
 
 
