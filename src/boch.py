@@ -45,13 +45,13 @@ def create_boch_user(collection, user_data):
             status_code=201,
         )
     else:
-        raise HTTPException(status_code=500, detail="failed to create position")
+        raise HTTPException(status_code=500, detail="failed to create user")
 
 
-def update_boch_user(collection, user_data):
+def update_boch_user(collection, user_name, user_data):
     try:
         query_result = collection.update_one(
-            {"userName": user_data.userName}, {"$set": user_data.dict()}
+            {"userName": user_name}, {"$set": user_data.dict()}
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -79,52 +79,40 @@ def delete_boch_user(collection, user_name_list):
 
 def get_boch_position_list(collection):
     try:
-        result = list(collection.find())
+        query_result = list(collection.find())
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    return {"position_list": bson_to_json(result)}
+    return {"position_list": bson_to_json(query_result)}
 
 
-def get_boch_position(collection, position_id):
+def get_boch_position(collection, position_name):
     try:
-        result = collection.find_one({"_id": position_id})
+        query_result = collection.find_one({"positionName": position_name})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    if result is None:
-        return {"result": "position not found"}
+    if query_result is None:
+        raise HTTPException(status_code=404, detail="user not found")
 
-    return result
+    res_json = bson_to_json(query_result)
+    return JSONResponse(content=res_json, status_code=200)
 
 
 # 직무 생성하기
-def create_position(position, collection):
-    # 직무 이름을 입력하지 않을 경우
-    if not position.position_name.strip():
-        return {"result": "position name is required"}
-
-    # 직무 타입이 custom이 아닌 경우
-    if position.type != "custom":
-        return {"result": "position type must be 'custom'"}
-
-    new_position = {
-        "_id": position.position_name,
-        "type": position.type,
-        "description": position.description,
-        "aws_policies": position.aws_policies,
-        "gcp_policies": position.gcp_policies,
-    }
-
+def create_position(position_data, collection):
     try:
-        result = collection.insert_one(new_position)
+        query_result = collection.insert_one(position_data)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    if result.acknowledged:
-        return {"result": f"{str(result.inserted_id)} created successfully"}
+    if query_result.acknowledged:
+        return JSONResponse(
+            content={"message": f"{position_data.userName} created successfully"},
+            status_code=201,
+        )
     else:
-        return {"result": "failed to create position"}
+        raise HTTPException(status_code=500, detail="failed to create position")
 
 
 # 직무 수정하기
