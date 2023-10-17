@@ -1,3 +1,4 @@
+from bson import json_util
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 
@@ -8,7 +9,7 @@ def get_boch_user_list(collection):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    res_content = {"user_list": query_result}
+    res_content = json_util.dumps({"user_list": query_result})
 
     return JSONResponse(content=res_content, status_code=200)
 
@@ -75,7 +76,7 @@ def get_boch_position_list(collection):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    return {"position_list": result}
+    return {"position_list": json_util.dumps(result)}
 
 
 def get_boch_position(collection, position_id):
