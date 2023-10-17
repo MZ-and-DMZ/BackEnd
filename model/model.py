@@ -1,25 +1,26 @@
-from pydantic import BaseModel
 from typing import List
+
+from pydantic import BaseModel
 
 
 class Auth(BaseModel):
     id: str
-    pwd: str
+    password: str
 
 
 class Position(BaseModel):
-    position_name: str
-    type: str = "custom"
+    positionName: str
+    isCustom: bool = True
     description: str
-    aws_policies: List[str]
-    gcp_policies: List[str]
+    awsPolicies: List[str]
+    gcpPolicies: List[str]
 
 
 class Users(BaseModel):
-    user_id: str
+    userName: str
     description: str
-    aws_account: str
-    gcp_account: str
-    attached_position: list
-    attached_group: list
+    awsAccount: str
+    gcpAccount: str
+    attachedPosition: list
+    attachedGroup: list
     updatetime: str

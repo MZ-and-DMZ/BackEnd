@@ -1,80 +1,65 @@
+from fastapi import HTTPException
+from fastapi.responses import JSONResponse
+
+
 def get_boch_user_list(collection):
     try:
         result = list(collection.find())
     except Exception as e:
-        return {"error": "server error", "detail": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
 
     return {"user_list": result}
 
 
-def get_boch_user(collection, user_id):
+def get_boch_user(collection, user_name):
     try:
-        result = collection.find_one({"_id": user_id})
+        result = collection.find_one({"userName": user_name})
     except Exception as e:
-        return {"error": "server error", "detail": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
 
     if result is None:
-        return {"result": "user not found"}
+        raise HTTPException(status_code=404, detail="user not found")
 
     return result
 
 
 def create_boch_user(collection, user_data):
-    user_schema = {
-        "_id": user_data.user_id,
-        "description": user_data.description,
-        "aws_account": user_data.aws_account,
-        "gcp_account": user_data.gcp_account,
-        "attached_position": user_data.attached_position,
-        "attached_group": user_data.attached_group,
-        "updatetime": user_data.updatetime,
-    }
-
     try:
-        result = collection.insert_one(user_schema)
+        result = collection.insert_one(user_data.dict())
     except Exception as e:
-        return {"error": "server error", "detail": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
 
     if result.acknowledged:
-        return {"result": f"{user_data.user_id} created successfully"}
+        return {"message": f"{user_data.userName} created successfully"}
     else:
-        return {"result": "failed to create position"}
+        raise HTTPException(status_code=500, detail="failed to create position")
 
 
 def update_boch_user(collection, user_data):
-    user_schema = {
-        "_id": user_data.user_id,
-        "description": user_data.description,
-        "aws_account": user_data.aws_account,
-        "gcp_account": user_data.gcp_account,
-        "attached_position": user_data.attached_position,
-        "attached_group": user_data.attached_group,
-        "updatetime": user_data.updatetime,
-    }
+    try:
+        result = collection.update_one(
+            {"userName": {user_data.userName}}, {"$set": user_data.dict()}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-    result = collection.update_one({"_id": {user_schema["_id"]}}, {"$set": user_schema})
     if result.matched_count == 0:
-        print("user not found")
+        raise HTTPException(status_code=404, detail="user not found")
     else:
-        print("user update success")
+        return {"message": "user update success"}
 
 
-def delete_boch_user(collection, user_id_list):
+def delete_boch_user(collection, user_name_list):
     result = dict()  # 삭제 결과 JSON
-    for user_id in user_id_list:
-        try:  # 삭제하기 전 DB에 있는지 검색
-            user = collection.find_one({"_id": user_id})
-            if user is None:
-                result[user_id] = "position not found"
-                continue
+    for user_name in user_name_list:
+        try:
+            delete_result = collection.delete_one({"userName": user_name})  # 삭제
+            if delete_result.deleted_count == 1:
+                result[user_name] = "deleted successfully"
+            else:
+                result[user_name] = "deletion failed"
         except Exception as e:
-            return {"error": "server error", "detail": str(e)}
-
-        delete_result = collection.delete_one({"_id": user_id})  # 삭제
-        if delete_result.deleted_count == 1:
-            result[user_id] = "deleted successfully"
-        else:
-            result[user_id] = "deletion failed"
+            raise HTTPException(status_code=500, detail=str(e))
 
     return result
 
@@ -83,7 +68,7 @@ def get_boch_position_list(collection):
     try:
         result = list(collection.find())
     except Exception as e:
-        return {"error": "server error", "detail": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
 
     return {"position_list": result}
 
@@ -92,7 +77,7 @@ def get_boch_position(collection, position_id):
     try:
         result = collection.find_one({"_id": position_id})
     except Exception as e:
-        return {"error": "server error", "detail": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
 
     if result is None:
         return {"result": "position not found"}
@@ -115,13 +100,13 @@ def create_position(position, collection):
         "type": position.type,
         "description": position.description,
         "aws_policies": position.aws_policies,
-        "gcp_policies": position.gcp_policies
+        "gcp_policies": position.gcp_policies,
     }
 
     try:
         result = collection.insert_one(new_position)
     except Exception as e:
-        return {"error": "server error", "detail": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
 
     if result.acknowledged:
         return {"result": f"{str(result.inserted_id)} created successfully"}
@@ -142,14 +127,14 @@ def update_position(position_id, position, collection):
             "type": position.type,
             "description": position.description,
             "aws_policies": position.aws_policies,
-            "gcp_policies": position.gcp_policies
+            "gcp_policies": position.gcp_policies,
         }
     }
 
     try:
         result = collection.update_one({"_id": position_id}, update_query)
     except Exception as e:
-        return {"error": "Server error", "detail": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
 
     if result.modified_count > 0:
         return {"result": f"{position_id} updated successfully"}
@@ -168,7 +153,7 @@ def delete_position(collection, position_id_list):
                 result[position_id] = "position not found"
                 continue
         except Exception as e:
-            return {"error": "server error", "detail": str(e)}
+            raise HTTPException(status_code=500, detail=str(e))
 
         # 직무 타입이 pre-define일 경우
         if position["type"] == "pre_define":
