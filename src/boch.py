@@ -4,64 +4,69 @@ from fastapi.responses import JSONResponse
 
 def get_boch_user_list(collection):
     try:
-        result = list(collection.find())
+        query_result = list(collection.find())
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    return {"user_list": result}
+    res_content = {"user_list": query_result}
+
+    return JSONResponse(content=res_content, status_code=200)
 
 
 def get_boch_user(collection, user_name):
     try:
-        result = collection.find_one({"userName": user_name})
+        query_result = collection.find_one({"userName": user_name})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    if result is None:
+    if query_result is None:
         raise HTTPException(status_code=404, detail="user not found")
 
-    return result
+    return JSONResponse(content=query_result, status_code=200)
 
 
 def create_boch_user(collection, user_data):
     try:
-        result = collection.insert_one(user_data.dict())
+        query_result = collection.insert_one(user_data.dict())
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    if result.acknowledged:
-        return {"message": f"{user_data.userName} created successfully"}
+    if query_result.acknowledged:
+        return JSONResponse(
+            content={"message": f"{user_data.userName} created successfully"},
+            status_code=201,
+        )
     else:
         raise HTTPException(status_code=500, detail="failed to create position")
 
 
 def update_boch_user(collection, user_data):
     try:
-        result = collection.update_one(
+        query_result = collection.update_one(
             {"userName": {user_data.userName}}, {"$set": user_data.dict()}
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    if result.matched_count == 0:
+    if query_result.matched_count == 0:
         raise HTTPException(status_code=404, detail="user not found")
     else:
         return {"message": "user update success"}
 
 
 def delete_boch_user(collection, user_name_list):
-    result = dict()  # 삭제 결과 JSON
+    delete_result = dict()  # 삭제 결과 JSON
     for user_name in user_name_list:
         try:
-            delete_result = collection.delete_one({"userName": user_name})  # 삭제
-            if delete_result.deleted_count == 1:
-                result[user_name] = "deleted successfully"
+            query_result = collection.delete_one({"userName": user_name})  # 삭제
+            if query_result.deleted_count == 1:
+                delete_result[user_name] = "deleted successfully"
             else:
-                result[user_name] = "deletion failed"
+                delete_result[user_name] = "deletion failed"
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
-    return result
+    return delete_result
 
 
 def get_boch_position_list(collection):
