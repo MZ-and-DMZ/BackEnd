@@ -7,7 +7,7 @@ class mongoClient:
         self.db = self.client["Boch"]
         self.collection_auth = self.db["auth"]
         self.collection_users = self.db["users"]
-        self.collection_position = self.db["positions"]
+        self.collection_positions = self.db["positions"]
 
     def close_client(self):
         self.client.close()
