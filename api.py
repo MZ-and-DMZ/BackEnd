@@ -64,7 +64,7 @@ def boch_get_position_list():
 
 
 @app.get(path="/boch/get/position/{position_name}")
-def boch_get_position(position_name: str = Path(..., title="Position ID")):
+def boch_get_position(position_name: str = Path(..., title="Position name")):
     return boch.get_boch_position(client.collection_positions, position_name)
 
 
@@ -75,11 +75,11 @@ def create_position(position: model.position):
 
 @app.put(path="/boch/update/position/{position_name}")
 def update_position(
-    position: model.position, position_name: str = Path(..., title="Position ID")
+    position: model.position, position_name: str = Path(..., title="Position name")
 ):
     return boch.update_position(position_name, position, client.collection_positions)
 
 
 @app.delete(path="/boch/delete/position")
-def delete_positions(position_id_list: List[str]):
-    return boch.delete_position(client.collection_positions, position_id_list)
+def delete_positions(position_name_list: List[str]):
+    return boch.delete_position(client.collection_positions, position_name_list)
