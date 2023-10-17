@@ -49,9 +49,11 @@ def boch_create_user(user_data: model.user):
     return boch.create_boch_user(client.collection_users, user_data)
 
 
-@app.put(path="/boch/update/user")
-def boch_update_user(user_data: model.user):
-    return boch.update_boch_user(client.collection_users, user_data)
+@app.put(path="/boch/update/user/{user_name}")
+def boch_update_user(
+    user_data: model.user, user_name: str = Path(..., title="user name")
+):
+    return boch.update_boch_user(client.collection_users, user_name, user_data)
 
 
 @app.delete(path="/boch/delete/user")
