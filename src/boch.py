@@ -23,7 +23,7 @@ def get_boch_user(collection, user_name):
     if query_result is None:
         raise HTTPException(status_code=404, detail="user not found")
 
-    return JSONResponse(content=query_result, status_code=200)
+    return JSONResponse(content=json_util.dumps(query_result), status_code=200)
 
 
 def create_boch_user(collection, user_data):
@@ -44,7 +44,7 @@ def create_boch_user(collection, user_data):
 def update_boch_user(collection, user_data):
     try:
         query_result = collection.update_one(
-            {"userName": {user_data.userName}}, {"$set": user_data.dict()}
+            {"userName": user_data.userName}, {"$set": user_data.dict()}
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
