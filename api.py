@@ -1,6 +1,7 @@
 from typing import List
 
 from fastapi import FastAPI, Path
+from fastapi.responses import FileResponse
 
 from database import db_client
 from model import model
@@ -24,7 +25,7 @@ async def shutdown_event():
 
 @app.get(path="/")
 async def root():
-    return {"message": "Hello World!"}
+    return FileResponse("./public/index.html")
 
 
 @app.post(path="/login")
