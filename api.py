@@ -49,7 +49,7 @@ def boch_get_user_list():
 
 
 @app.get(path="/boch/get/user/{user_name}")
-def boch_get_user(user_name: str = Path(..., title="user_id")):
+def boch_get_user(user_name: str = Path(..., title="user name")):
     return boch.get_boch_user(client.collection_users, user_name)
 
 
@@ -76,7 +76,7 @@ def boch_get_position_list():
 
 
 @app.get(path="/boch/get/position/{position_name}")
-def boch_get_position(position_name: str = Path(..., title="Position name")):
+def boch_get_position(position_name: str = Path(..., title="position name")):
     return boch.get_boch_position(client.collection_positions, position_name)
 
 
@@ -87,7 +87,7 @@ def create_position(position: model.position):
 
 @app.put(path="/boch/update/position/{position_name}")
 def update_position(
-    position: model.position, position_name: str = Path(..., title="Position name")
+    position: model.position, position_name: str = Path(..., title="position name")
 ):
     return boch.update_position(position_name, position, client.collection_positions)
 
