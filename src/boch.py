@@ -30,6 +30,7 @@ def get_boch_user(collection, user_name):
         raise HTTPException(status_code=404, detail="user not found")
 
     res_json = bson_to_json(query_result)
+
     return JSONResponse(content=res_json, status_code=200)
 
 
@@ -83,7 +84,9 @@ def get_boch_position_list(collection):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    return {"position_list": bson_to_json(query_result)}
+    res_json = bson_to_json({"position_list": query_result})
+
+    return JSONResponse(content=res_json, status_code=200)
 
 
 def get_boch_position(collection, position_name):
@@ -93,22 +96,23 @@ def get_boch_position(collection, position_name):
         raise HTTPException(status_code=500, detail=str(e))
 
     if query_result is None:
-        raise HTTPException(status_code=404, detail="user not found")
+        raise HTTPException(status_code=404, detail="position not found")
 
     res_json = bson_to_json(query_result)
+
     return JSONResponse(content=res_json, status_code=200)
 
 
 # 직무 생성하기
 def create_position(position_data, collection):
     try:
-        query_result = collection.insert_one(position_data)
+        query_result = collection.insert_one(position_data.dict())
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
     if query_result.acknowledged:
         return JSONResponse(
-            content={"message": f"{position_data.userName} created successfully"},
+            content={"message": f"{position_data.positionName} created successfully"},
             status_code=201,
         )
     else:
@@ -116,54 +120,41 @@ def create_position(position_data, collection):
 
 
 # 직무 수정하기
-def update_position(position_id, position, collection):
-    existing_position = collection.find_one({"_id": position_id})
-
-    if existing_position is None:
-        return {"result": "position not found"}
-
-    update_query = {
-        "$set": {
-            "_id": position.position_name,
-            "type": position.type,
-            "description": position.description,
-            "aws_policies": position.aws_policies,
-            "gcp_policies": position.gcp_policies,
-        }
-    }
-
+def update_position(position_name, position_data, collection):
     try:
-        result = collection.update_one({"_id": position_id}, update_query)
+        query_result = collection.update_one(
+            {"positionName": position_name}, {"$set": position_data.dict()}
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-    if result.modified_count > 0:
-        return {"result": f"{position_id} updated successfully"}
+    
+    if query_result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="position not found")
     else:
-        return {"result": f"no modifications for {position_id}"}
+        return {"message": "position update success"}
 
 
 # 직무 삭제하기
-def delete_position(collection, position_id_list):
-    result = dict()
-    for position_id in position_id_list:
+def delete_position(collection, position_name_list):
+    delete_result = dict()
+    for position_name in position_name_list:
         try:
-            position = collection.find_one({"_id": position_id})
+            position = collection.find_one({"positionName": position_name})
 
             if position is None:
-                result[position_id] = "position not found"
+                delete_result[position_name] = "position not found"
                 continue
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
         # 직무 타입이 pre-define일 경우
-        if position["type"] == "pre_define":
-            result[position_id] = "cannot delete pre-defined position"
+        if position["isCustom"] is False:
+            delete_result[position_name] = "cannot delete pre-defined position"
         else:
-            delete_result = collection.delete_one({"_id": position_id})
-            if delete_result.deleted_count == 1:
-                result[position_id] = "deleted successfully"
+            query_result = collection.delete_one({"positionName": position_name})
+            if query_result.deleted_count == 1:
+                delete_result[position_name] = "deleted successfully"
             else:
-                result[position_id] = "deletion failed"
+                delete_result[position_name] = "deletion failed"
 
-    return result
+    return delete_result

@@ -15,7 +15,7 @@ def auth_user(user, collection):
     if hashed_password is not None and isinstance(hashed_password, str):
         hashed_password = hashed_password.encode('utf-8')
 
-    if verify_password(user.pwd, hashed_password):
+    if verify_password(user.password, hashed_password):
         return {"result": "success"}
 
     return {"result": "password is incorrect"}
