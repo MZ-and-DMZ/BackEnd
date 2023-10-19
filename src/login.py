@@ -1,21 +1,23 @@
 from .password_hash import verify_password
+from fastapi import HTTPException
+from fastapi.responses import JSONResponse
 
 
 def auth_user(user, collection):
     try:
         result = collection.find_one({"_id": user.id})
     except Exception as e:
-        return {"result": "server error", "detail": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
 
     if result is None:
-        return {"result": "user not exist"}
+        raise HTTPException(status_code=404, detail="user not found")
 
     hashed_password = result.get("password")
 
     if hashed_password is not None and isinstance(hashed_password, str):
         hashed_password = hashed_password.encode('utf-8')
 
-    if verify_password(user.pwd, hashed_password):
-        return {"result": "success"}
+    if verify_password(user.password, hashed_password):
+        return JSONResponse(content={"result": "success"}, status_code=200)
 
-    return {"result": "password is incorrect"}
+    return JSONResponse(content={"result": "password is incorrect"}, status_code=401)
