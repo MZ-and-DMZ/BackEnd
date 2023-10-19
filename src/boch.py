@@ -3,6 +3,8 @@ import json
 from bson import json_util
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
+from database import db_client
+from bson.objectid import ObjectId
 
 
 def bson_to_json(data):
@@ -158,3 +160,40 @@ def delete_position(collection, position_name_list):
                 delete_result[position_name] = "deletion failed"
 
     return delete_result
+
+
+# 테스트용, 작동은 하는데 이 형태가 효율적인지에 대해서는 고민 필요 (정리 안했음)
+# 직무 생성 시 빈칸인지 확인, iscustom이 true인지 확인 등이 필요 > 프론트?
+def update_position2(position_id, position_data, collection, user_update, user_collection):
+    try:
+        position = collection.find_one({"_id": ObjectId(position_id)})
+
+        if position is None:
+            raise HTTPException(status_code=404, detail="position not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    if position["isCustom"] is True:
+        query_result = collection.update_one(
+            {"_id": ObjectId(position_id)}, {"$set": position_data.dict()}
+        )
+
+        if query_result.modified_count > 0:
+            return {"message": "position update success"}
+        else:
+            raise HTTPException(status_code=404, detail="position not updated")
+    else:
+        new_position_data = {
+            "isCustom": True,
+            **position_data.dict(),
+        }
+        query_result = collection.insert_one(new_position_data)
+        new_position_id = query_result.inserted_id
+
+        if user_update:
+            user_collection.update_many(
+                {"attachedPosition": ObjectId(position_id)},
+                {"$set": {"attachedPosition.$": new_position_id}},
+            )
+
+        return {"message": f"Position updated with new ID: {new_position_id}"}
