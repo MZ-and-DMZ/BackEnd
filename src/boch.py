@@ -188,11 +188,13 @@ def update_position2(position_id, position_data, collection, user_update, user_c
             **position_data.dict(),
         }
         query_result = collection.insert_one(new_position_data)
-        new_position_id = query_result.inserted_id
+        new_position_id = query_result.inserted_id  # ObjectID로 저장 시
+        # new_position_id = str(query_result.inserted_id) - 문자열로 저장 시
 
         if user_update:
             user_collection.update_many(
                 {"attachedPosition": ObjectId(position_id)},
+                # {"attachedPosition": position_id},
                 {"$set": {"attachedPosition.$": new_position_id}},
             )
 
