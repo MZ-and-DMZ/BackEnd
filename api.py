@@ -101,4 +101,4 @@ def delete_positions(position_name_list: List[str]):
 def update_position2(
     position: model.position, user_update: bool, position_id: str = Path(..., title="position id")
 ):
-    return boch.update_position2(position_id, position, client.collection_positions, user_update, client.collection_users)
+    return boch.update_position_by_id(position_id, position, client.collection_positions, client.collection_users)
