@@ -95,3 +95,14 @@ def update_position(
 @app.delete(path="/boch/delete/position")
 def delete_positions(position_name_list: List[str]):
     return boch.delete_position(client.collection_positions, position_name_list)
+
+
+@app.put(path="/boch/update/position/test/{position_id}")
+def update_position_by_id(
+    position: model.position, position_id: str = Path(..., title="position id")
+):
+    return boch.update_position_by_id(position_id, position, client.collection_positions, client.collection_users)
+
+@app.put(path="/boch/get/aws/policylist")
+def get_aws_policy_list():
+    return boch.get_aws_policy_list(client.collection_awsPolicies)

@@ -3,6 +3,7 @@ import json
 from bson import json_util
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
+from bson.objectid import ObjectId
 
 
 def bson_to_json(data):
@@ -103,7 +104,7 @@ def get_boch_position(collection, position_name):
     return JSONResponse(content=res_json, status_code=200)
 
 
-# 직무 생성하기
+# 직무 생성하기 : 직무 생성 시 빈칸인지 확인, iscustom이 true인지 확인 등이 필요 > 프론트?
 def create_position(position_data, collection):
     try:
         query_result = collection.insert_one(position_data.dict())
@@ -127,7 +128,7 @@ def update_position(position_name, position_data, collection):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
     if query_result.matched_count == 0:
         raise HTTPException(status_code=404, detail="position not found")
     else:
@@ -158,3 +159,45 @@ def delete_position(collection, position_name_list):
                 delete_result[position_name] = "deletion failed"
 
     return delete_result
+
+
+# 직무 수정하기
+def update_position_by_id(position_id, position_data, collection, user_collection):
+    try:
+        position = collection.find_one({"_id": ObjectId(position_id)})
+        if not position:
+            raise HTTPException(status_code=404, detail="Position not found")
+
+        if position["isCustom"]:    # 커스텀 직무라면 원본 데이터를 수정
+            query_result = collection.update_one(
+                {"_id": ObjectId(position_id)}, {"$set": position_data.dict()}
+            )
+
+            if query_result.modified_count > 0:
+                return {"message": "Position update successful"}
+            else:
+                raise HTTPException(status_code=404, detail="Position not updated")
+        else:   # 솔루션 제공 직무라면 복사본 생성 후 수정
+            new_position_data = {
+                "isCustom": True,
+                **position_data.dict(),
+            }
+            query_result = collection.insert_one(new_position_data)
+            user_collection.update_many(
+                {"attachedPosition": ObjectId(position_id)},    # 문자열로 삽입 시 ObjectID() 삭제
+                {"$set": {"attachedPosition.$": query_result.inserted_id}},    # 문자열로 삽입 시 str() 추가
+            )
+            return {"message": f"Position updated with new ID: {query_result.inserted_id}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def get_aws_policy_list(collection):
+    try:
+        query_result = list(collection.find())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    res_json = bson_to_json({"aws_policy_list": query_result})
+
+    return JSONResponse(content=res_json, status_code=200)

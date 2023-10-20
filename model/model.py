@@ -21,6 +21,6 @@ class user(BaseModel):
     description: str
     awsAccount: str
     gcpAccount: str
-    attachedPosition: list
-    attachedGroup: list
+    attachedPosition: List[str]
+    attachedGroup: List[str]
     updatetime: str
