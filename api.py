@@ -99,6 +99,6 @@ def delete_positions(position_name_list: List[str]):
 
 @app.put(path="/boch/update/position/test/{position_id}")
 def update_position2(
-    position: model.position, user_update: bool, position_id: str = Path(..., title="position id")
+    position: model.position, position_id: str = Path(..., title="position id")
 ):
     return boch.update_position_by_id(position_id, position, client.collection_positions, client.collection_users)
