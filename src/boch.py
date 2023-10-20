@@ -190,3 +190,14 @@ def update_position_by_id(position_id, position_data, collection, user_collectio
             return {"message": f"Position updated with new ID: {query_result.inserted_id}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+def get_aws_policy_list(collection):
+    try:
+        query_result = list(collection.find())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    res_json = bson_to_json({"aws_policy_list": query_result})
+
+    return JSONResponse(content=res_json, status_code=200)
