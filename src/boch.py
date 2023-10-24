@@ -1,11 +1,12 @@
 import json
 
 from bson import json_util
+from bson.objectid import ObjectId
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 
 
-def bson_to_json(data):  # bson을 json으로 바꿔줌
+def bson_to_json(data):
     return json.loads(json_util.dumps(data))
 
 
@@ -16,12 +17,13 @@ def get_boch_user_list(collection):
         raise HTTPException(status_code=500, detail=str(e))
 
     res_json = bson_to_json({"user_list": query_result})
+
     return JSONResponse(content=res_json, status_code=200)
 
 
-def get_boch_user(collection, user_name):
+def get_boch_user(collection, user_id):
     try:
-        query_result = collection.find_one({"userName": user_name})
+        query_result = collection.find_one({"_id": ObjectId(user_id)})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -48,10 +50,10 @@ def create_boch_user(collection, user_data):
         raise HTTPException(status_code=500, detail="failed to create user")
 
 
-def update_boch_user(collection, user_name, user_data):
+def update_boch_user(collection, user_id, user_data):
     try:
         query_result = collection.update_one(
-            {"userName": user_name}, {"$set": user_data.dict()}
+            {"_id": user_id}, {"$set": user_data.dict()}
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -62,15 +64,15 @@ def update_boch_user(collection, user_name, user_data):
         return {"message": "user update success"}
 
 
-def delete_boch_user(collection, user_name_list):
+def delete_boch_user(collection, user_id_list):
     delete_result = dict()  # 삭제 결과 JSON
-    for user_name in user_name_list:
+    for user_id in user_id_list:
         try:
-            query_result = collection.delete_one({"userName": user_name})  # 삭제
+            query_result = collection.delete_one({"_id": user_id})  # 삭제
             if query_result.deleted_count == 1:
-                delete_result[user_name] = "deleted successfully"
+                delete_result[user_id] = "deleted successfully"
             else:
-                delete_result[user_name] = "deletion failed"
+                delete_result[user_id] = "deletion failed"
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
@@ -126,7 +128,7 @@ def update_position(position_name, position_data, collection):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
     if query_result.matched_count == 0:
         raise HTTPException(status_code=404, detail="position not found")
     else:
