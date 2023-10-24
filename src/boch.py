@@ -4,7 +4,10 @@ from bson import json_util
 from bson.objectid import ObjectId
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
-from bson.objectid import ObjectId
+
+from csp_iam_sync import iamSync
+
+iam_sync = iamSync()
 
 
 def bson_to_json(data):
@@ -43,6 +46,12 @@ def create_boch_user(collection, user_data):
         raise HTTPException(status_code=500, detail=str(e))
 
     if query_result.acknowledged:
+        # 이 부분에 함수 삽입
+        if user_data.attachedPosition is None:
+            pass
+        else:
+            iam_sync.user_create_sync(user_data)
+
         return JSONResponse(
             content={"message": f"{user_data.userName} created successfully"},
             status_code=201,
@@ -54,7 +63,7 @@ def create_boch_user(collection, user_data):
 def update_boch_user(collection, user_id, user_data):
     try:
         query_result = collection.update_one(
-            {"_id": user_id}, {"$set": user_data.dict()}
+            {"_id": ObjectId(user_id)}, {"$set": user_data.dict()}
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -69,7 +78,7 @@ def delete_boch_user(collection, user_id_list):
     delete_result = dict()  # 삭제 결과 JSON
     for user_id in user_id_list:
         try:
-            query_result = collection.delete_one({"_id": user_id})  # 삭제
+            query_result = collection.delete_one({"_id": ObjectId(user_id)})  # 삭제
             if query_result.deleted_count == 1:
                 delete_result[user_id] = "deleted successfully"
             else:
@@ -128,7 +137,7 @@ def update_position(position_id, position_data, collection, user_collection):
         if not position:
             raise HTTPException(status_code=404, detail="Position not found")
 
-        if position["isCustom"]:    # 커스텀 직무라면 원본 데이터를 수정
+        if position["isCustom"]:  # 커스텀 직무라면 원본 데이터를 수정
             query_result = collection.update_one(
                 {"_id": ObjectId(position_id)}, {"$set": position_data.dict()}
             )
@@ -137,17 +146,21 @@ def update_position(position_id, position_data, collection, user_collection):
                 return {"message": "Position update successful"}
             else:
                 raise HTTPException(status_code=404, detail="Position not updated")
-        else:   # 솔루션 제공 직무라면 복사본 생성 후 수정
+        else:  # 솔루션 제공 직무라면 복사본 생성 후 수정
             new_position_data = {
                 "isCustom": True,
                 **position_data.dict(),
             }
             query_result = collection.insert_one(new_position_data)
             user_collection.update_many(
-                {"attachedPosition": ObjectId(position_id)},    # 문자열로 삽입 시 ObjectID() 삭제
-                {"$set": {"attachedPosition.$": query_result.inserted_id}},    # 문자열로 삽입 시 str() 추가
+                {"attachedPosition": ObjectId(position_id)},  # 문자열로 삽입 시 ObjectID() 삭제
+                {
+                    "$set": {"attachedPosition.$": query_result.inserted_id}
+                },  # 문자열로 삽입 시 str() 추가
             )
-            return {"message": f"Position updated with new ID: {query_result.inserted_id}"}
+            return {
+                "message": f"Position updated with new ID: {query_result.inserted_id}"
+            }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
