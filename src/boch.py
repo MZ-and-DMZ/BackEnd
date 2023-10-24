@@ -114,7 +114,7 @@ def create_position(position_data, collection):
 
     if query_result.acknowledged:
         return JSONResponse(
-            content={"message": f"{query_result.inserted_id} created successfully"},
+            content={"message": f"{position_data.positionName} created successfully"},
             status_code=201,
         )
     else:
