@@ -104,7 +104,7 @@ def get_boch_position(collection, position_id):
     return JSONResponse(content=res_json, status_code=200)
 
 
-# 직무 생성하기 : 직무 생성 시 빈칸인지 확인, iscustom이 true인지 확인 등이 필요 > 프론트?
+# 직무 생성하기
 def create_position(position_data, collection):
     try:
         query_result = collection.insert_one(position_data.dict())
@@ -113,7 +113,7 @@ def create_position(position_data, collection):
 
     if query_result.acknowledged:
         return JSONResponse(
-            content={"message": f"{position_data.positionName} created successfully"},
+            content={"message": f"{query_result.inserted_id} created successfully"},
             status_code=201,
         )
     else:
