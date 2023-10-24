@@ -5,9 +5,9 @@ from bson.objectid import ObjectId
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 
-from .csp_iam_sync import iamSync
+from .aws_iam_sync import awsIamSync
 
-iam_sync = iamSync()
+aws_iam_sync = awsIamSync()
 
 
 def bson_to_json(data):
@@ -50,7 +50,7 @@ def create_boch_user(collection, user_data):
         if user_data.attachedPosition is None:
             pass
         else:
-            iam_sync.user_create_sync(user_data)
+            aws_iam_sync.user_create_sync(user_data)
 
         return JSONResponse(
             content={"message": f"{user_data.userName} created successfully"},
