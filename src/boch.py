@@ -90,9 +90,9 @@ def get_boch_position_list(collection):
     return JSONResponse(content=res_json, status_code=200)
 
 
-def get_boch_position(collection, position_name):
+def get_boch_position(collection, position_id):
     try:
-        query_result = collection.find_one({"positionName": position_name})
+        query_result = collection.find_one({"_id": ObjectId(position_id)})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -121,48 +121,7 @@ def create_position(position_data, collection):
 
 
 # 직무 수정하기
-def update_position(position_name, position_data, collection):
-    try:
-        query_result = collection.update_one(
-            {"positionName": position_name}, {"$set": position_data.dict()}
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-    if query_result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="position not found")
-    else:
-        return {"message": "position update success"}
-
-
-# 직무 삭제하기
-def delete_position(collection, position_name_list):
-    delete_result = dict()
-    for position_name in position_name_list:
-        try:
-            position = collection.find_one({"positionName": position_name})
-
-            if position is None:
-                delete_result[position_name] = "position not found"
-                continue
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
-
-        # 직무 타입이 pre-define일 경우
-        if position["isCustom"] is False:
-            delete_result[position_name] = "cannot delete pre-defined position"
-        else:
-            query_result = collection.delete_one({"positionName": position_name})
-            if query_result.deleted_count == 1:
-                delete_result[position_name] = "deleted successfully"
-            else:
-                delete_result[position_name] = "deletion failed"
-
-    return delete_result
-
-
-# 직무 수정하기
-def update_position_by_id(position_id, position_data, collection, user_collection):
+def update_position(position_id, position_data, collection, user_collection):
     try:
         position = collection.find_one({"_id": ObjectId(position_id)})
         if not position:
@@ -190,6 +149,32 @@ def update_position_by_id(position_id, position_data, collection, user_collectio
             return {"message": f"Position updated with new ID: {query_result.inserted_id}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# 직무 삭제하기
+def delete_position(collection, position_id_list):
+    delete_result = dict()
+    for position_id in position_id_list:
+        try:
+            position = collection.find_one({"_id": ObjectId(position_id)})
+
+            if position is None:
+                delete_result[position_id] = "position not found"
+                continue
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+        # 직무 타입이 pre-define일 경우
+        if position["isCustom"] is False:
+            delete_result[position_id] = "cannot delete pre-defined position"
+        else:
+            query_result = collection.delete_one({"_id": ObjectId(position_id)})
+            if query_result.deleted_count == 1:
+                delete_result[position_id] = "deleted successfully"
+            else:
+                delete_result[position_id] = "deletion failed"
+
+    return delete_result
 
 
 def get_aws_policy_list(collection):
