@@ -5,7 +5,7 @@ from bson.objectid import ObjectId
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 
-from csp_iam_sync import iamSync
+from .csp_iam_sync import iamSync
 
 iam_sync = iamSync()
 
