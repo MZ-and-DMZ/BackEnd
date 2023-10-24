@@ -18,6 +18,6 @@ def auth_user(user, collection):
         hashed_password = hashed_password.encode('utf-8')
 
     if verify_password(user.password, hashed_password):
-        return JSONResponse(content={"result": "success"}, status_code=200)
+        return JSONResponse(content={"message": "login success"}, status_code=200)
 
-    return JSONResponse(content={"result": "password is incorrect"}, status_code=401)
+    return JSONResponse(content={"message": "password is incorrect"}, status_code=401)

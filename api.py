@@ -75,9 +75,9 @@ def boch_get_position_list():
     return boch.get_boch_position_list(client.collection_positions)
 
 
-@app.get(path="/boch/get/position/{position_name}")
-def boch_get_position(position_name: str = Path(..., title="position name")):
-    return boch.get_boch_position(client.collection_positions, position_name)
+@app.get(path="/boch/get/position/{position_id}")
+def boch_get_position(position_id: str = Path(..., title="position id")):
+    return boch.get_boch_position(client.collection_positions, position_id)
 
 
 @app.post(path="/boch/create/position")
@@ -85,13 +85,18 @@ def create_position(position: model.position):
     return boch.create_position(position, client.collection_positions)
 
 
-@app.put(path="/boch/update/position/{position_name}")
+@app.put(path="/boch/update/position/{position_id}")
 def update_position(
-    position: model.position, position_name: str = Path(..., title="position name")
+    position: model.position, position_id: str = Path(..., title="position id")
 ):
-    return boch.update_position(position_name, position, client.collection_positions)
+    return boch.update_position(position_id, position, client.collection_positions, client.collection_users)
 
 
 @app.delete(path="/boch/delete/position")
-def delete_positions(position_name_list: List[str]):
-    return boch.delete_position(client.collection_positions, position_name_list)
+def delete_positions(position_id_list: List[str]):
+    return boch.delete_position(client.collection_positions, position_id_list)
+
+
+@app.put(path="/boch/get/aws/policylist")
+def get_aws_policy_list():
+    return boch.get_aws_policy_list(client.collection_awsPolicies)
