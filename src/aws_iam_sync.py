@@ -24,7 +24,7 @@ class awsIamSync:
         collection = self.db["awsUsers"]
         query_result = collection.find_one({"userName": user_data.awsAccount})
         if query_result is None:
-            raise 0
+            raise Exception("aws iam 계정이 없음")
         for postion_name in user_data.attachedPosition:
             self.position_sync_aws(user_data.awsAccount, postion_name)
         pass
