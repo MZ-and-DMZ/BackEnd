@@ -200,3 +200,14 @@ def get_aws_policy_list(collection):
     res_json = bson_to_json({"aws_policy_list": query_result})
 
     return JSONResponse(content=res_json, status_code=200)
+
+
+def get_gcp_role_list(collection):
+    try:
+        query_result = list(collection.find())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    res_json = bson_to_json({"gcp_role_list": query_result})
+
+    return JSONResponse(content=res_json, status_code=200)

@@ -100,3 +100,8 @@ def delete_positions(position_id_list: List[str]):
 @app.put(path="/boch/get/aws/policylist")
 def get_aws_policy_list():
     return boch.get_aws_policy_list(client.collection_awsPolicies)
+
+
+@app.put(path="/boch/get/gcp/rolelist")
+def get_gcp_role_list():
+    return boch.get_gcp_role_list(client.collection_gcpRoles)
