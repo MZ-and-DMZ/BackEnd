@@ -82,7 +82,7 @@ class awsIamSync:
 
     # 정책 json 문서를 가지고 옴
     def get_policy_docs(self, policy_arn_list):
-        serach_string = "arn:aws:iam::aws:policy/"
+        serach_string = "arn:aws:iam::aws:policy/"  # aws 관리형 signature
         docs_list = []
         for policy_arn in policy_arn_list:
             if serach_string in policy_arn:
@@ -101,12 +101,13 @@ class awsIamSync:
         query_result = self.positions_collection.find_one(
             {"positionName": position_name}
         )
+        if query_result is None:
+            raise Exception("position not found")
         arn_list = [list(d.values())[0] for d in query_result["policies"]]
         docs_list = self.get_policy_docs(arn_list)
         docs_list = self.policy_compress(docs_list)
-
         new_policies = []
-        index = 0
+        index = 1
         for docs_index in range(len(docs_list)):
             if (type(docs_list[docs_index])) == int:
                 new_policies.append(arn_list[docs_list[docs_index]])
@@ -119,7 +120,6 @@ class awsIamSync:
                     PolicyDocument=json.dumps(docs_list[docs_index]),
                 )
                 new_policies.append(sdk_result["Policy"]["Arn"])
-
         for policy in new_policies:
             self.iam_sdk.attach_user_policy(
                 UserName=aws_iam_user_name, PolicyArn=policy
