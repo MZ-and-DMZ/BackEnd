@@ -1,18 +1,22 @@
+import boto3
 from pymongo import MongoClient
 
 from database import db_client
 
-from .aws_iam import awsSdk
 from .config import conf
 
 
 class awsIamSync:
     def __init__(self):
+        self.iam_sdk = boto3.client(
+            "iam",
+            aws_access_key_id=conf["aws_access_key"],
+            aws_secret_access_key=conf["aws_secret_access_key"],
+        )
         self.client = MongoClient(conf["DB_server"], serverSelectionTimeoutMS=5000)
         self.db = self.client["Boch"]
         self.positions_collection = self.db["positions"]
         self.awsPolicies_collection = self.db["awsPolicies"]
-        self.aws_sdk = awsSdk()
         pass
 
     def count_string(obj):
@@ -86,6 +90,7 @@ class awsIamSync:
 
     # 직무를 aws iam 계정에 할당
     def position_sync_aws(self, aws_iam_user_name, position_name):
+        new_policy_name = f"boch-policy-for-{aws_iam_user_name}"
         query_result = self.positions_collection.find_one(
             {"positionName": position_name}
         )
@@ -94,8 +99,18 @@ class awsIamSync:
         )
         docs_list = self.policy_compress(docs_list)
 
-        for docs in docs_list:
-            self.aws_sdk()
+        new_policies = []
+        for docs_index in range(len(docs_list)):
+            policy_name = f"{new_policy_name} {docs_index+1}"
+            sdk_result = self.iam_sdk.create_policy(
+                PolicyName=policy_name, PolicyDocument=docs_list[docs_index]
+            )
+            new_policies.append(sdk_result["Policy"]["Arn"])
+
+        for policy in new_policies:
+            self.iam_sdk.attach_user_policy(
+                UserName=aws_iam_user_name, PolicyArn=policy
+            )
 
     def user_create_sync(self, user_data):
         collection = self.db["awsUsers"]
