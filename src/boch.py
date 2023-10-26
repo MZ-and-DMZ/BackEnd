@@ -46,7 +46,6 @@ def create_boch_user(collection, user_data):
         raise HTTPException(status_code=500, detail=str(e))
 
     if query_result.acknowledged:
-        # 이 부분에 함수 삽입
         if user_data.attachedPosition is None:
             pass
         else:
