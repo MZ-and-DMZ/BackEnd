@@ -7,6 +7,7 @@ class mongoClient:
         self.db = self.client["Boch"]
         self.collection_auth = self.db["auth"]
         self.collection_users = self.db["users"]
+        self.collection_groups = self.db["groups"]
         self.collection_positions = self.db["positions"]
         self.collection_awsPolicies = self.db["awsPolicies"]
         self.collection_gcpRoles = self.db["gcpRoles"]

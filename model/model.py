@@ -24,3 +24,13 @@ class user(BaseModel):
     attachedPosition: List[str]
     attachedGroup: List[str]
     updatetime: str
+
+
+class group(BaseModel):
+    groupName: str
+    description: str
+    awsGroup: str
+    gcpGroup: str
+    users: List[str]
+    attachedPosition: List[str]
+    updatetime: str
