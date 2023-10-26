@@ -20,30 +20,35 @@ class awsIamSync:
         self.positions_collection = self.db["positions"]
         self.awsPolicies_collection = self.db["awsPolicies"]
 
+    # 문자열의 문자 수를 반환해준다.
     def count_string(self, input):
         string = str(input)
         string = string.replace(" ", "")
         return len(string)
 
+    # 정책을 합칠 수 있는 조합을 반환한다.
     def calculate_set(self, string_lengths):
-        limit_string = 5000
-        string_lengths_copy = string_lengths.copy()
-        string_lengths_copy.sort()
-        result = []
-
-        while len(string_lengths_copy) > 1:
-            index_set = []
+        limit_string = 5000  # 최대 문자 수
+        string_lengths_copy = string_lengths.copy()  # 입력받은 문자 수 리스트를 복사한다.
+        string_lengths_copy.sort()  # 오름차 순으로 정렬
+        result = []  # 결과를 저장할 리스트
+        while len(string_lengths_copy) > 1:  # list안의 요소가 1개 이상일 경우 반복한다.
+            index_set = []  # 찾아낸 조합을 저장할 리스트
             max_value = string_lengths_copy[-1]
             min_value = string_lengths_copy[0]
-            max_value_index = string_lengths.index(string_lengths_copy.pop(-1))
+            max_value_index = string_lengths.index(
+                string_lengths_copy.pop(-1)
+            )  # 최댓값의 인덱스를 index_set 리스트에 추가하고 pop
             index_set.append(max_value_index)
-            string_lengths[max_value_index] = -1
+            string_lengths[max_value_index] = -1  # 사용한 숫자를 재사용하지 못하게 -1로 변경
             total_value = max_value + min_value
-            while total_value < limit_string:
-                min_value_index = string_lengths.index(string_lengths_copy.pop(0))
+            while total_value < limit_string:  # 최대 문자 수보다 작을 경우에만 반복
+                min_value_index = string_lengths.index(
+                    string_lengths_copy.pop(0)
+                )  # 최솟값의 인덱스를 index_set에 추가하고 pop
                 index_set.append(min_value_index)
                 string_lengths[min_value_index] = -1
-                if string_lengths_copy:
+                if string_lengths_copy:  # 남은 값이 있을 경우 리스트의 최솟값을 다시 할당
                     min_value = string_lengths_copy[0]
                     total_value += min_value
                 else:
@@ -53,17 +58,18 @@ class awsIamSync:
             else:
                 result.extend(index_set)
         else:
-            if string_lengths_copy:
+            if string_lengths_copy:  # 반복문이 끝나고 값이 하나 있을 경우에 마지막 값의 index를 result에 추가
                 result.append(string_lengths.index(string_lengths_copy[0]))
 
         return result
 
+    # 정책을 합쳐준다.
     def policy_compress(self, policies):
         result_docs_list = []
-        str_num = []
+        string_length = []
         for policy in policies:
-            str_num.append(self.count_string(policy["Statement"]))
-        index_set = self.calculate_set(str_num)
+            string_length.append(self.count_string(policy["Statement"]))
+        index_set = self.calculate_set(string_length)
         for set in index_set:
             if isinstance(set, int):
                 result_docs_list.append(set)
@@ -74,6 +80,7 @@ class awsIamSync:
             result_docs_list.append(result_docs)
         return result_docs_list
 
+    # 정책 json 문서를 가지고 옴
     def get_policy_docs(self, policy_arn_list):
         serach_string = "arn:aws:iam::aws:policy/"
         docs_list = []
