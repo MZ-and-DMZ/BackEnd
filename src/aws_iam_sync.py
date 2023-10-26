@@ -1,3 +1,5 @@
+import json
+
 import boto3
 from pymongo import MongoClient
 
@@ -19,7 +21,7 @@ class awsIamSync:
         self.awsPolicies_collection = self.db["awsPolicies"]
         pass
 
-    def count_string(obj):
+    def count_string(self, obj):
         string = str(obj)
         string = string.replace(" ", "")
         return len(string)
@@ -34,6 +36,7 @@ class awsIamSync:
             while number_list:
                 if len(number_list) == 1:
                     combine.append(str_num.index(number_list.pop(0)))
+                    str_num[combine[-1]] = 0
                     break
                 max_value = max(number_list)
                 max_index = number_list.index(max_value)
@@ -45,16 +48,20 @@ class awsIamSync:
                     else:
                         tmp = tmp + min_value
                         combine.append(str_num.index(min_value))
+                        str_num[combine[-1]] = 0
                         number_list.pop(min_index)
                 elif max_value + min_value > limit_string:
                     combine.append(str_num.index(max_value))
+                    str_num[combine[-1]] = 0
                     number_list.pop(max_index)
                     break
                 else:
                     tmp = max_value + min_value
                     combine.append(str_num.index(max_value))
+                    str_num[combine[-1]] = 0
                     number_list.pop(max_index)
                     combine.append(str_num.index(min_value))
+                    str_num[combine[-1]] = 0
                     number_list.pop(number_list.index(min_value))
             result.append(combine)
 
@@ -75,7 +82,7 @@ class awsIamSync:
         return result_docs_list
 
     def get_policy_docs(self, policy_arn_list):
-        serach_string = "arn:aws:iam::aws:policy"
+        serach_string = "arn:aws:iam::aws:policy/"
         docs_list = []
         for policy_arn in policy_arn_list:
             if serach_string in policy_arn:
@@ -95,15 +102,16 @@ class awsIamSync:
             {"positionName": position_name}
         )
         docs_list = self.get_policy_docs(
-            [[list(d.values())[0] for d in query_result["policies"]]]
+            [list(d.values())[0] for d in query_result["policies"]]
         )
+        print(docs_list)
         docs_list = self.policy_compress(docs_list)
 
         new_policies = []
         for docs_index in range(len(docs_list)):
-            policy_name = f"{new_policy_name} {docs_index+1}"
+            policy_name = f"{new_policy_name}-{docs_index+1}"
             sdk_result = self.iam_sdk.create_policy(
-                PolicyName=policy_name, PolicyDocument=docs_list[docs_index]
+                PolicyName=policy_name, PolicyDocument=json.dumps(docs_list[docs_index])
             )
             new_policies.append(sdk_result["Policy"]["Arn"])
 
