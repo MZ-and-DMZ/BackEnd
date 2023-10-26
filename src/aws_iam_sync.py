@@ -26,8 +26,8 @@ class awsIamSync:
         string = string.replace(" ", "")
         return len(string)
 
-    def calculate_set(str_num):
-        limit_string = 6000
+    def calculate_set(self, str_num):
+        limit_string = 5000
         number_list = list(str_num)
         result = []
         while number_list:
@@ -73,8 +73,10 @@ class awsIamSync:
         for policy in policies:
             str_num.append(self.count_string(policy["Statement"]))
         index_set = self.calculate_set(str_num)
-
         for set in index_set:
+            if len(set) == 1:
+                result_docs_list.append(set[0])
+                continue
             result_docs = {"Version": "2012-10-17", "Statement": []}
             for index in set:
                 result_docs["Statement"].extend(policies[index]["Statement"])
@@ -101,19 +103,24 @@ class awsIamSync:
         query_result = self.positions_collection.find_one(
             {"positionName": position_name}
         )
-        docs_list = self.get_policy_docs(
-            [list(d.values())[0] for d in query_result["policies"]]
-        )
-        print(docs_list)
+        arn_list = [list(d.values())[0] for d in query_result["policies"]]
+        docs_list = self.get_policy_docs(arn_list)
         docs_list = self.policy_compress(docs_list)
 
         new_policies = []
+        index = 0
         for docs_index in range(len(docs_list)):
-            policy_name = f"{new_policy_name}-{docs_index+1}"
-            sdk_result = self.iam_sdk.create_policy(
-                PolicyName=policy_name, PolicyDocument=json.dumps(docs_list[docs_index])
-            )
-            new_policies.append(sdk_result["Policy"]["Arn"])
+            if (type(docs_list[docs_index])) == int:
+                new_policies.append(arn_list[docs_list[docs_index]])
+                index -= 1
+                continue
+            else:
+                policy_name = f"{new_policy_name}-{docs_index+index}"
+                sdk_result = self.iam_sdk.create_policy(
+                    PolicyName=policy_name,
+                    PolicyDocument=json.dumps(docs_list[docs_index]),
+                )
+                new_policies.append(sdk_result["Policy"]["Arn"])
 
         for policy in new_policies:
             self.iam_sdk.attach_user_policy(
