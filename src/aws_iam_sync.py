@@ -1,6 +1,7 @@
 import json
 
 import boto3
+from fastapi import HTTPException
 from pymongo import MongoClient
 
 from database import db_client
@@ -102,7 +103,7 @@ class awsIamSync:
             {"positionName": position_name}
         )
         if query_result is None:
-            raise Exception("position not found")
+            raise HTTPException(status_code=500, detail="position not found")
         arn_list = [list(d.values())[0] for d in query_result["policies"]]
         docs_list = self.get_policy_docs(arn_list)
         docs_list = self.policy_compress(docs_list)
@@ -129,6 +130,6 @@ class awsIamSync:
         collection = self.db["awsUsers"]
         query_result = collection.find_one({"UserName": user_data.awsAccount})
         if query_result is None:
-            raise Exception("aws iam 계정이 없음")
+            raise HTTPException(status_code=500, detail="aws iam user not found")
         for postion_name in user_data.attachedPosition:
             self.position_sync_aws(user_data.awsAccount, postion_name)
