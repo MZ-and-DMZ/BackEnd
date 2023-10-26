@@ -56,6 +56,20 @@ class awsIamSync:
 
         return result
 
+    def policy_compress(self, policies):
+        result_docs_list = []
+        str_num = []
+        for policy in policies:
+            str_num.append(self.count_string(policy["Statement"]))
+        index_set = self.calculate_set(str_num)
+
+        for set in index_set:
+            result_docs = {"Version": "2012-10-17", "Statement": []}
+            for index in set:
+                result_docs["Statement"].extend(policies[index]["Statement"])
+            result_docs_list.append(result_docs)
+        return result_docs_list
+
     def get_policy_docs(self, policy_arn_list):
         serach_string = "arn:aws:iam::aws:policy"
         docs_list = []
@@ -78,6 +92,10 @@ class awsIamSync:
         docs_list = self.get_policy_docs(
             [[list(d.values())[0] for d in query_result["policies"]]]
         )
+        docs_list = self.policy_compress(docs_list)
+
+        for docs in docs_list:
+            self.aws_sdk()
 
     def user_create_sync(self, user_data):
         collection = self.db["awsUsers"]
