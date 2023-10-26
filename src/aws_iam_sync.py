@@ -19,51 +19,42 @@ class awsIamSync:
         self.db = self.client["Boch"]
         self.positions_collection = self.db["positions"]
         self.awsPolicies_collection = self.db["awsPolicies"]
-        pass
 
-    def count_string(self, obj):
-        string = str(obj)
+    def count_string(self, input):
+        string = str(input)
         string = string.replace(" ", "")
         return len(string)
 
-    def calculate_set(self, str_num):
+    def calculate_set(self, string_lengths):
         limit_string = 5000
-        number_list = list(str_num)
+        string_lengths_copy = string_lengths.copy()
+        string_lengths_copy.sort()
         result = []
-        while number_list:
-            tmp = 0
-            combine = []
-            while number_list:
-                if len(number_list) == 1:
-                    combine.append(str_num.index(number_list.pop(0)))
-                    str_num[combine[-1]] = 0
-                    break
-                max_value = max(number_list)
-                max_index = number_list.index(max_value)
-                min_value = min(number_list)
-                min_index = number_list.index(min_value)
-                if tmp != 0:
-                    if tmp + min_value > limit_string:
-                        break
-                    else:
-                        tmp = tmp + min_value
-                        combine.append(str_num.index(min_value))
-                        str_num[combine[-1]] = 0
-                        number_list.pop(min_index)
-                elif max_value + min_value > limit_string:
-                    combine.append(str_num.index(max_value))
-                    str_num[combine[-1]] = 0
-                    number_list.pop(max_index)
-                    break
+
+        while len(string_lengths_copy) > 1:
+            index_set = []
+            max_value = string_lengths_copy[-1]
+            min_value = string_lengths_copy[0]
+            max_value_index = string_lengths.index(string_lengths_copy.pop(-1))
+            index_set.append(max_value_index)
+            string_lengths[max_value_index] = -1
+            total_value = max_value + min_value
+            while total_value < limit_string:
+                min_value_index = string_lengths.index(string_lengths_copy.pop(0))
+                index_set.append(min_value_index)
+                string_lengths[min_value_index] = -1
+                if string_lengths_copy:
+                    min_value = string_lengths_copy[0]
+                    total_value += min_value
                 else:
-                    tmp = max_value + min_value
-                    combine.append(str_num.index(max_value))
-                    str_num[combine[-1]] = 0
-                    number_list.pop(max_index)
-                    combine.append(str_num.index(min_value))
-                    str_num[combine[-1]] = 0
-                    number_list.pop(number_list.index(min_value))
-            result.append(combine)
+                    break
+            if len(index_set) > 1:
+                result.append(index_set)
+            else:
+                result.extend(index_set)
+        else:
+            if string_lengths_copy:
+                result.append(string_lengths.index(string_lengths_copy[0]))
 
         return result
 
@@ -74,8 +65,8 @@ class awsIamSync:
             str_num.append(self.count_string(policy["Statement"]))
         index_set = self.calculate_set(str_num)
         for set in index_set:
-            if len(set) == 1:
-                result_docs_list.append(set[0])
+            if isinstance(set, int):
+                result_docs_list.append(set)
                 continue
             result_docs = {"Version": "2012-10-17", "Statement": []}
             for index in set:
@@ -134,4 +125,3 @@ class awsIamSync:
             raise Exception("aws iam 계정이 없음")
         for postion_name in user_data.attachedPosition:
             self.position_sync_aws(user_data.awsAccount, postion_name)
-        pass
