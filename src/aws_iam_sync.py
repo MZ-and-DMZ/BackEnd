@@ -10,6 +10,8 @@ class awsIamSync:
     def __init__(self):
         self.client = MongoClient(conf["DB_server"], serverSelectionTimeoutMS=5000)
         self.db = self.client["Boch"]
+        self.positions_collection = self.db["positions"]
+        self.awsPolicies_collection = self.db["awsPolicies"]
         self.aws_sdk = awsSdk()
         pass
 
@@ -54,14 +56,28 @@ class awsIamSync:
 
         return result
 
+    def get_policy_docs(self, policy_arn_list):
+        serach_string = "arn:aws:iam::aws:policy"
+        docs_list = []
+        for policy_arn in policy_arn_list:
+            if serach_string in policy_arn:
+                collection = self.db["awsPolicies"]
+                query_result = collection.find_one({"Arn": policy_arn})
+                docs_list.append(query_result["Document"])
+            else:
+                collection = self.db["awsCustomPolicies"]
+                query_result = collection.find_one({"Arn": policy_arn})
+                docs_list.append(query_result["Document"])
+        return docs_list
+
     # 직무를 aws iam 계정에 할당
     def position_sync_aws(self, aws_iam_user_name, position_name):
-        collection = self.db["positions"]
-        query_result = collection.find_one({"positionName": position_name})
-        for policy_arn in query_result["policies"]:
-            self.aws_sdk.attach_user_policy(
-                aws_iam_user_name, list(policy_arn.values())[0]
-            )
+        query_result = self.positions_collection.find_one(
+            {"positionName": position_name}
+        )
+        docs_list = self.get_policy_docs(
+            [[list(d.values())[0] for d in query_result["policies"]]]
+        )
 
     def user_create_sync(self, user_data):
         collection = self.db["awsUsers"]
