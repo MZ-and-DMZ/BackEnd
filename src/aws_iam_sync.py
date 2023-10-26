@@ -126,6 +126,7 @@ class awsIamSync:
                 UserName=aws_iam_user_name, PolicyArn=policy
             )
 
+    # 유저를 생성했을 때 직무를 AWS에 적용하는 함수
     def user_create_sync(self, user_data):
         collection = self.db["awsUsers"]
         query_result = collection.find_one({"UserName": user_data.awsAccount})
@@ -133,3 +134,7 @@ class awsIamSync:
             raise HTTPException(status_code=500, detail="aws iam user not found")
         for postion_name in user_data.attachedPosition:
             self.position_sync_aws(user_data.awsAccount, postion_name)
+
+    # 유저를 수정했을 때 직무를 적용하는 함수
+    def user_update_sync(self, origin_user_data, new_user_data):
+        pass

@@ -59,10 +59,11 @@ def create_boch_user(collection, user_data):
         raise HTTPException(status_code=500, detail="failed to create user")
 
 
-def update_boch_user(collection, user_id, user_data):
+def update_boch_user(collection, user_id, new_user_data):
     try:
+        origin_user_data = collection.find_one({"_id": ObjectId(user_id)})
         query_result = collection.update_one(
-            {"_id": ObjectId(user_id)}, {"$set": user_data.dict()}
+            {"_id": ObjectId(user_id)}, {"$set": new_user_data.dict()}
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -70,6 +71,8 @@ def update_boch_user(collection, user_id, user_data):
     if query_result.matched_count == 0:
         raise HTTPException(status_code=404, detail="user not found")
     else:
+        # 여기에 함수 삽입
+        aws_iam_sync.user_update_sync(origin_user_data, new_user_data)
         return {"message": "user update success"}
 
 
