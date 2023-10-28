@@ -82,7 +82,7 @@ def boch_get_group(group_id: str = Path(..., title="group id")):
 
 @app.post(path="/boch/create/group")
 def boch_create_group(group_data: model.group):
-    return boch.create_boch_group(group_data, client.collection_groups)
+    return boch.create_boch_group(group_data, client.collection_groups, client.collection_users)
 
 
 @app.put(path="/boch/update/group/{group_id}")
