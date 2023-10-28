@@ -5,12 +5,9 @@ from bson.objectid import ObjectId
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 
-from .aws_sdk import awsSDK
-from .csp_iam_sync import iamSync
+from .aws_iam_sync import awsIamSync
 
 aws_iam_sync = awsIamSync()
-iam_sync = iamSync()
-aws_sdk = awsSDK()
 
 
 def bson_to_json(data):
@@ -79,14 +76,6 @@ def update_boch_user(collection, user_id, new_user_data):
         return {"message": "user update success"}
 
 
-def update_boch_user_info(collection, user_id, new_user_data):
-    pass
-
-
-def update_boch_user_position(collection, user_id, new_user_data):
-    pass
-
-
 def delete_boch_user(collection, user_id_list):
     delete_result = dict()  # 삭제 결과 JSON
     for user_id in user_id_list:
@@ -136,7 +125,7 @@ def create_boch_group(group_data, collection, user_collection):
     if query_result.acknowledged:
         if group_data.awsGroup:  # awsGroup을 입력한 경우
             try:
-                aws_sdk.create_group(group_data.awsGroup)  # aws 그룹 생성
+                awsIamSync.create_group(group_data.awsGroup)  # aws 그룹 생성
             except Exception as e:
                 raise HTTPException(status_code=500, detail=str(e))
 
@@ -147,7 +136,7 @@ def create_boch_group(group_data, collection, user_collection):
                         aws_account = user_document.get("awsAccount")
                         if aws_account:
                             try:
-                                aws_sdk.add_user_to_group(
+                                awsIamSync.add_user_to_group(
                                     group_data.awsGroup, aws_account
                                 )  # aws 그룹에 사용자 추가
                                 user_collection.update_one(
@@ -160,7 +149,7 @@ def create_boch_group(group_data, collection, user_collection):
                                         }
                                     },
                                 )  # users 데이터에 attachedGroup 추가
-                                aws_sdk.update_awsUsers(
+                                awsIamSync.update_awsUsers(
                                     aws_account
                                 )  # awsUsers 변경 사항 반영
                             except Exception as e:
@@ -169,13 +158,13 @@ def create_boch_group(group_data, collection, user_collection):
             if group_data.attachedPosition:  # attachedPosition을 입력한 경우
                 for position_id in group_data.attachedPosition:
                     try:
-                        aws_sdk.attach_group_position(
+                        awsIamSync.attach_group_position(
                             group_data.awsGroup, position_id
                         )  # 직무 처리 및 aws 그룹에 정책으로 연결
                     except Exception as e:
                         raise HTTPException(status_code=500, detail=str(e))
 
-            aws_sdk.update_awsGroups(group_data.awsGroup)  # awsGroups 변경 사항 반영
+            awsIamSync.update_awsGroups(group_data.awsGroup)  # awsGroups 변경 사항 반영
         elif group_data.gcpGroup:  # gcpGroup을 입력한 경우
             pass
 
@@ -301,7 +290,6 @@ def delete_position(collection, position_id_list):
     for position_id in position_id_list:
         try:
             position = collection.find_one({"_id": ObjectId(position_id)})
-
             if position is None:
                 delete_result[position_id] = "position not found"
                 continue
