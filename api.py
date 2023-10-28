@@ -70,6 +70,33 @@ def boch_delete_user(user_name_list: List[str]):
     return boch.delete_boch_user(client.collection_users, user_name_list)
 
 
+@app.get(path="/boch/get/grouplist")
+def boch_get_group_list():
+    return boch.get_boch_group_list(client.collection_groups)
+
+
+@app.get(path="/boch/get/group/{group_id}")
+def boch_get_group(group_id: str = Path(..., title="group id")):
+    return boch.get_boch_group(client.collection_groups, group_id)
+
+
+@app.post(path="/boch/create/group")
+def boch_create_group(group_data: model.group):
+    return boch.create_boch_group(group_data, client.collection_groups, client.collection_users)
+
+
+@app.put(path="/boch/update/group/{group_id}")
+def boch_update_group(
+    group_data: model.group, group_id: str = Path(..., title="group id")
+):
+    return boch.update_boch_group(group_id, group_data, client.collection_groups, client.collection_users)
+
+
+@app.delete(path="/boch/delete/group")
+def boch_delete_group(group_id_list: List[str]):
+    return boch.delete_boch_group(client.collection_groups, group_id_list)
+
+
 @app.get(path="/boch/get/positionlist")
 def boch_get_position_list():
     return boch.get_boch_position_list(client.collection_positions)
@@ -89,7 +116,7 @@ def create_position(position: model.position):
 def update_position(
     position: model.position, position_id: str = Path(..., title="position id")
 ):
-    return boch.update_position(position_id, position, client.collection_positions, client.collection_users)
+    return boch.update_position(position_id, position, client.collection_positions, client.collection_users) #group도 같이 수정 필요
 
 
 @app.delete(path="/boch/delete/position")
@@ -100,3 +127,8 @@ def delete_positions(position_id_list: List[str]):
 @app.put(path="/boch/get/aws/policylist")
 def get_aws_policy_list():
     return boch.get_aws_policy_list(client.collection_awsPolicies)
+
+
+@app.put(path="/boch/get/gcp/rolelist")
+def get_gcp_role_list():
+    return boch.get_gcp_role_list(client.collection_gcpRoles)
