@@ -6,8 +6,10 @@ from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 
 from .csp_iam_sync import iamSync
+from .aws_sdk import awsSDK
 
 iam_sync = iamSync()
+aws_sdk = awsSDK()
 
 
 def bson_to_json(data):
@@ -114,23 +116,44 @@ def get_boch_group(collection, group_id):
     return JSONResponse(content=res_json, status_code=200)
 
 
-# aws, gcp group 있는지 확인 -> 생성
-def create_boch_group(group_data, collection):
+def create_boch_group(group_data, collection, user_collection):
     try:
         query_result = collection.insert_one(group_data.dict())
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
     if query_result.acknowledged:
-        # 이 부분에 함수 삽입
-        if group_data.attachedPosition is None:
+        if group_data.awsGroup:  # awsGroup을 입력한 경우
+            try:
+                aws_sdk.create_group(group_data.awsGroup)  # aws 그룹 생성
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=str(e))
+
+            if group_data.users:  # users를 입력한 경우
+                for user_id in group_data.users:
+                    user_document = user_collection.find_one({"_id": ObjectId(user_id)})
+                    if user_document:
+                        aws_account = user_document.get("awsAccount")
+                        if aws_account:
+                            try:
+                                aws_sdk.add_user_to_group(group_data.awsGroup, aws_account)  # aws 그룹에 사용자 추가
+                                user_collection.update_one(
+                                    {"_id": ObjectId(user_id)}, {"$set": {"attachedGroup.$": str(query_result.inserted_id)}}
+                                )  # users 데이터에 attachedGroup 추가
+                                aws_sdk.update_awsUsers(aws_account)  # awsUsers 변경 사항 반영
+                            except Exception as e:
+                                raise HTTPException(status_code=500, detail=str(e))
+
+            if group_data.attachedPosition:  # attachedPosition을 입력한 경우
+                for position_id in group_data.attachedPosition:
+                    try:
+                        aws_sdk.attach_group_position(group_data.awsGroup, position_id)  # 직무 처리 및 aws 그룹에 정책으로 연결
+                    except Exception as e:
+                        raise HTTPException(status_code=500, detail=str(e))
+
+            aws_sdk.update_awsGroups(group_data.awsGroup)  # awsGroups 변경 사항 반영
+        elif group_data.gcpGroup:  # gcpGroup을 입력한 경우
             pass
-        else:
-            iam_sync.group_create_sync(group_data)
-        
-        if group_data.users is None:
-            pass
-        #user db에도 넣어야 함
 
         return JSONResponse(
             content={"message": f"{group_data.groupName} created successfully"},
