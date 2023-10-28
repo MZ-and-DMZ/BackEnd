@@ -76,6 +76,14 @@ def update_boch_user(collection, user_id, new_user_data):
         return {"message": "user update success"}
 
 
+def update_boch_user_info(collection, user_id, new_user_data):
+    pass
+
+
+def update_boch_user_position(collection, user_id, new_user_data):
+    pass
+
+
 def delete_boch_user(collection, user_id_list):
     delete_result = dict()  # 삭제 결과 JSON
     for user_id in user_id_list:
