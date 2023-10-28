@@ -1,10 +1,9 @@
 import json
+import re
 
 import boto3
 from fastapi import HTTPException
 from pymongo import MongoClient
-
-from database import db_client
 
 from .config import conf
 
@@ -20,13 +19,17 @@ class awsIamSync:
         self.db = self.client["Boch"]
         self.positions_collection = self.db["positions"]
         self.awsPolicies_collection = self.db["awsPolicies"]
+        self.awsUsers_collection = self.db["awsUsers"]
+
+    def remove_special_characters(self, string):
+        return re.sub(r"[^A-Za-z0-9\s]", "", string)
 
     # 문자열의 문자 수를 반환해준다.
     def count_string(self, input):
         string = str(input)
         string = string.replace(" ", "")
         return len(string)
-
+ㄷ
     # 정책을 합칠 수 있는 조합을 반환한다.
     def calculate_set(self, string_lengths):
         limit_string = 5000  # 최대 문자 수
@@ -86,19 +89,34 @@ class awsIamSync:
         serach_string = "arn:aws:iam::aws:policy/"  # aws 관리형 signature
         docs_list = []
         for policy_arn in policy_arn_list:
+            arn, policy_name = map(str, policy_arn.split("/"))
             if serach_string in policy_arn:
                 collection = self.db["awsPolicies"]
                 query_result = collection.find_one({"Arn": policy_arn})
+                for index, statement in enumerate(
+                    query_result["Document"]["Statement"]
+                ):ㅇ
+                    statement["Sid"] = self.remove_special_characters(
+                        f"{policy_name}{index+1}"
+                    )
                 docs_list.append(query_result["Document"])
             else:
                 collection = self.db["awsCustomPolicies"]
                 query_result = collection.find_one({"Arn": policy_arn})
+                for index, statement in enumerate(
+                    query_result["Document"]["Statement"]
+                ):
+                    statement["Sid"] = self.remove_special_characters(
+                        f"{policy_name}{index+1}"
+                    )
                 docs_list.append(query_result["Document"])
         return docs_list
 
     # 직무를 aws iam 계정에 할당
     def position_sync_aws(self, aws_iam_user_name, position_name):
-        new_policy_name = f"boch-policy-for-{aws_iam_user_name}"
+        new_policy_name = (f"boch-{position_name}-for-{aws_iam_user_name}").replace(
+            " ", ""
+        )
         query_result = self.positions_collection.find_one(
             {"positionName": position_name}
         )
@@ -121,10 +139,35 @@ class awsIamSync:
                     PolicyDocument=json.dumps(docs_list[docs_index]),
                 )
                 new_policies.append(sdk_result["Policy"]["Arn"])
+
         for policy in new_policies:
             self.iam_sdk.attach_user_policy(
                 UserName=aws_iam_user_name, PolicyArn=policy
             )
+
+    def delete_old_position(self, aws_user_name, position_name):
+        policies = self.positions_collection.find_one({"positionName": position_name})[
+            "policies"
+        ]
+        arn_list = [list(d.values())[0] for d in policies]
+        attached_policies = self.awsUsers_collection.find_one(
+            {"UserName": aws_user_name}
+        )["AttachedPolicies"]
+        detach_policies = []
+        for arn in arn_list:
+            for policy in attached_policies:
+                if policy["PolicyArn"] == arn:
+                    detach_policies.append(arn)
+                elif position_name.replace(" ", "") in policy["PolicyName"]:
+                    detach_policies.append(policy["PolicyArn"])
+
+        for policy_arn in detach_policies:
+            try:
+                self.iam_sdk.detach_user_policy(
+                    UserName=aws_user_name, PolicyArn=policy_arn
+                )
+            except:
+                pass
 
     # 유저를 생성했을 때 직무를 AWS에 적용하는 함수
     def user_create_sync(self, user_data):
@@ -135,6 +178,10 @@ class awsIamSync:
         for postion_name in user_data.attachedPosition:
             self.position_sync_aws(user_data.awsAccount, postion_name)
 
-    # 유저를 수정했을 때 직무를 적용하는 함수
+    # 유저의 직무를 수정했을 때 직무를 적용하는 함수
     def user_update_sync(self, origin_user_data, new_user_data):
-        pass
+        aws_user_name = origin_user_data["awsAccount"]
+        for postion_name in origin_user_data["attachedPosition"]:
+            self.delete_old_position(aws_user_name, postion_name)
+        for postion_name in new_user_data.attachedPosition:
+            self.position_sync_aws(new_user_data.awsAccount, postion_name)
