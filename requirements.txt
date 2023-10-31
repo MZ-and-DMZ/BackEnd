@@ -4,3 +4,4 @@ httpx
 pymongo
 pydantic
 bcrypt
+requests

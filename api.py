@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 
 from database import db_client
 from model import model
-from src import boch, login
+from src import boch, login, logging
 from src.config import conf
 
 app = FastAPI()
@@ -105,3 +105,9 @@ def get_aws_policy_list():
 @app.put(path="/boch/get/gcp/rolelist")
 def get_gcp_role_list():
     return boch.get_gcp_role_list(client.collection_gcpRoles)
+
+
+# 권한 회수 관련 API
+@app.get(path="/logging")
+def download_and_update_actions():
+    return logging.download_and_update_actions(client.collection_awsActionListSize, client.collection_awsActionList)
