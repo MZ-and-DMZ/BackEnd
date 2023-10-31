@@ -5,3 +5,4 @@ pymongo
 pydantic
 bcrypt
 requests
+boto3
