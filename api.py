@@ -105,3 +105,4 @@ def get_aws_policy_list():
 @app.put(path="/boch/get/gcp/rolelist")
 def get_gcp_role_list():
     return boch.get_gcp_role_list(client.collection_gcpRoles)
+
