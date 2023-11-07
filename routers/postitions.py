@@ -80,3 +80,17 @@ async def update_position(
         raise HTTPException(status_code=404, detail="position not found")
     else:
         return {"message": "position update success"}
+
+
+@router.delete(path="/delete/{position_name}")
+async def delete_positions(position_name: str = Path(..., title="position name")):
+    collection = mongodb.db["positions"]
+
+    try:
+        delete_result = await collection.delete_one({"_id": position_name})  # 삭제
+        if delete_result.deleted_count == 1:
+            return {"message": "position delete success"}
+        else:
+            raise HTTPException(status_code=500, detail="deletion failed")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
