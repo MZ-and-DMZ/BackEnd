@@ -10,9 +10,13 @@ class auth(BaseModel):
 
 class position(BaseModel):
     positionName: str
-    isCustom: bool = True
     description: str
     csp: str
+    policies: List[str]
+
+
+class updatePosition(BaseModel):
+    description: str
     policies: List[str]
 
 

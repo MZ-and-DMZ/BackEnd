@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Path
 from fastapi.responses import JSONResponse
 
 from models import mongodb
-from models.schemas import updateUser, user
+from models.schemas import position, updatePosition
 from src.util import bson_to_json
 
 router = APIRouter(prefix="/positions", tags=["positions"])
@@ -40,3 +40,43 @@ async def get_position(position_name: str = Path(..., title="position name")):
     res_json = bson_to_json(result)
 
     return JSONResponse(content=res_json, status_code=200)
+
+
+@router.post(path="/create")
+async def create_position(position_data: position):
+    collection = mongodb.db["positions"]
+    insert_data = position_data.dict()
+    insert_data["_id"] = insert_data.pop("positionName")
+
+    try:
+        insert_result = await collection.insert_one(insert_data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    if insert_result.acknowledged:
+        return JSONResponse(
+            content={"message": f"{position_data.positionName} created successfully"},
+            status_code=201,
+        )
+    else:
+        raise HTTPException(status_code=500, detail="failed to create position")
+
+
+@router.put(path="/update/{position_name}")
+async def update_position(
+    position_data: updatePosition, position_name: str = Path(..., title="position name")
+):
+    collection = mongodb.db["positions"]
+    new_position_data = position_data.dict()
+
+    try:
+        update_result = await collection.update_one(
+            {"_id": position_name}, {"$set": new_position_data}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    if update_result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="position not found")
+    else:
+        return {"message": "position update success"}
