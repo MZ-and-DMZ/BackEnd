@@ -25,6 +25,14 @@ class user(BaseModel):
     attachedGroup: List[str]
 
 
+class updateUser(BaseModel):
+    description: str
+    awsAccount: str
+    gcpAccount: str
+    attachedPosition: List[str]
+    attachedGroup: List[str]
+
+
 class group(BaseModel):
     groupName: str
     description: str
