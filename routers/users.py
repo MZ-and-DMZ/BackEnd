@@ -88,3 +88,16 @@ async def update_user(
         # 여기에 함수 삽입
         # aws_iam_sync.user_update_sync(origin_user_data, new_user_data)
         return {"message": "user update success"}
+
+
+@router.delete(path="/delete/{user_name}")
+async def delete_user(user_name: str = Path(..., title="user name")):
+    collection = mongodb.db["users"]
+    try:
+        delete_result = collection.delete_one({"_id": user_name})  # 삭제
+        if delete_result.deleted_count == 1:
+            return {"message": "user delete success"}
+        else:
+            raise HTTPException(status_code=500, detail="deletion failed")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
