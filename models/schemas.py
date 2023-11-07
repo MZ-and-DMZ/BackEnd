@@ -23,7 +23,6 @@ class user(BaseModel):
     gcpAccount: str
     attachedPosition: List[str]
     attachedGroup: List[str]
-    updatetime: str
 
 
 class group(BaseModel):
