@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Path
 from fastapi.responses import JSONResponse
 
 from models import mongodb
-from models.schemas import user
+from models.schemas import updateUser, user
 from src.util import bson_to_json
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -42,9 +42,10 @@ async def get_user(user_name: str = Path(..., title="user name")):
 
 
 @router.post(path="/create")
-async def boch_create_user(user_data: user):
+async def create_user(user_data: user):
     collection = mongodb.db["users"]
     insert_data = user_data.dict()
+    insert_data["_id"] = insert_data.pop("userName")
     insert_data["updatetime"] = datetime.now()
     try:
         insert_result = await collection.insert_one(insert_data)
@@ -63,3 +64,27 @@ async def boch_create_user(user_data: user):
         )
     else:
         raise HTTPException(status_code=500, detail="failed to create user")
+
+
+@router.put(path="/update/{user_name}")
+async def update_user(
+    user_data: updateUser, user_name: str = Path(..., title="user name")
+):
+    collection = mongodb.db["users"]
+    new_user_data = user_data.dict()
+    new_user_data["updatetime"] = datetime.now()
+
+    try:
+        old_user_data = await collection.find_one({"_id": user_name})
+        update_result = await collection.update_one(
+            {"_id": user_name}, {"$set": new_user_data}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    if update_result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="user not found")
+    else:
+        # 여기에 함수 삽입
+        # aws_iam_sync.user_update_sync(origin_user_data, new_user_data)
+        return {"message": "user update success"}
