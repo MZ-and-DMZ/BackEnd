@@ -1,6 +1,4 @@
 import bcrypt
-from fastapi import HTTPException
-from fastapi.responses import JSONResponse
 
 
 # 비밀번호 해싱

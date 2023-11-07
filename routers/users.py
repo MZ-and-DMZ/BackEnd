@@ -10,7 +10,7 @@ from src.util import bson_to_json
 router = APIRouter(prefix="/users", tags=["users"])
 
 
-@router.get(path="/all")
+@router.get(path="/list")
 async def get_user_list():
     collection = mongodb.db["users"]
 

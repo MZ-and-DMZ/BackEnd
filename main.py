@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from models import mongodb
-from routers import auth, users
+from routers import auth, aws, gcp, postitions, users
 from src.config import conf
 
 app = FastAPI()
@@ -19,6 +19,9 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(users.router)
+app.include_router(postitions.router)
+app.include_router(aws.router)
+app.include_router(gcp.router)
 
 
 @app.on_event("startup")
