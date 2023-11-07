@@ -39,6 +39,8 @@ async def get_user(user_name: str = Path(..., title="user name")):
     if result is None:
         raise HTTPException(status_code=404, detail="user not found")
 
+    result["userName"] = result.pop("_id")
+
     res_json = bson_to_json(result)
 
     return JSONResponse(content=res_json, status_code=200)
