@@ -26,11 +26,11 @@ async def get_position_list():
 
 
 @router.get(path="/{position_name}")
-def get_position(position_name: str = Path(..., title="position name")):
+async def get_position(position_name: str = Path(..., title="position name")):
     collection = mongodb.db["positions"]
 
     try:
-        result = collection.find_one({"_id": position_name})
+        result = await collection.find_one({"_id": position_name})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
