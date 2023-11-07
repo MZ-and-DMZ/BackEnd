@@ -19,6 +19,9 @@ async def get_user_list():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+    for user in user_list:
+        user["userName"] = user.pop("_id")
+
     res_json = {"user_list": bson_to_json(user_list)}
 
     return JSONResponse(content=res_json, status_code=200)

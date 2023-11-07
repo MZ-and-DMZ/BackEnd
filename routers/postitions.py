@@ -19,6 +19,7 @@ async def get_position_list():
 
     for position in position_list:
         position["positionName"] = position.pop("_id")
+
     res_json = {"position_list": bson_to_json(position_list)}
 
     return JSONResponse(content=res_json, status_code=200)
