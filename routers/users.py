@@ -32,7 +32,7 @@ async def get_user(user_name: str = Path(..., title="user name")):
     collection = mongodb.db["users"]
 
     try:
-        result = await collection.find_one({"userName": user_name})
+        result = await collection.find_one({"_id": user_name})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
