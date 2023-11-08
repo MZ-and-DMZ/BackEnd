@@ -11,7 +11,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 
 @router.get(path="/list")
-async def get_user_list():
+async def list_user():
     collection = mongodb.db["users"]
 
     try:

@@ -9,7 +9,7 @@ router = APIRouter(prefix="/positions", tags=["positions"])
 
 
 @router.get(path="/list")
-async def get_position_list():
+async def list_position():
     collection = mongodb.db["positions"]
 
     try:

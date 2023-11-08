@@ -11,7 +11,7 @@ router = APIRouter(prefix="/groups", tags=["groups"])
 
 
 @router.get(path="/boch/get/grouplist")
-async def get_group_list():
+async def list_group():
     collection = mongodb.db["groups"]
 
     try:

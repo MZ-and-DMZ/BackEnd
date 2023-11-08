@@ -8,7 +8,7 @@ router = APIRouter(prefix="/aws", tags=["aws"])
 
 
 @router.get(path="/policy/list")
-async def get_aws_policy_list():
+async def list_aws_policy():
     collection = mongodb.db["awsPolicies"]
     try:
         policy_list = await collection.find().to_list(None)
