@@ -40,8 +40,11 @@ class updateUser(BaseModel):
 class group(BaseModel):
     groupName: str
     description: str
-    awsGroup: str
-    gcpGroup: str
     users: List[str]
     attachedPosition: List[str]
-    updatetime: str
+
+
+class updateGroup(BaseModel):
+    description: str
+    users: List[str]
+    attachedPosition: List[str]
