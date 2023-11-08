@@ -8,7 +8,7 @@ router = APIRouter(prefix="/gcp", tags=["gcp"])
 
 
 @router.get(path="/role/list")
-async def get_gcp_role_list():
+async def list_gcp_role():
     collection = mongodb.db["gcpRoles"]
     try:
         role_list = await collection.find().to_list(None)
