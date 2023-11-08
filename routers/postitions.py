@@ -94,3 +94,20 @@ async def delete_positions(position_name: str = Path(..., title="position name")
             raise HTTPException(status_code=500, detail="deletion failed")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get(path="/convert/{position_name}")
+async def convert_positions(position_name: str = Path(..., title="position name")):
+    collection = mongodb.db["positions"]
+
+    try:
+        result = await collection.find_one({"_id": position_name})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    if result is None:
+        raise HTTPException(status_code=404, detail="position not found")
+
+    res_json = bson_to_json(result)
+
+    return JSONResponse(content=res_json, status_code=200)
