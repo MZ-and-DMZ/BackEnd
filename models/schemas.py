@@ -10,9 +10,13 @@ class auth(BaseModel):
 
 class position(BaseModel):
     positionName: str
-    isCustom: bool = True
     description: str
     csp: str
+    policies: List[str]
+
+
+class updatePosition(BaseModel):
+    description: str
     policies: List[str]
 
 
@@ -36,8 +40,11 @@ class updateUser(BaseModel):
 class group(BaseModel):
     groupName: str
     description: str
-    awsGroup: str
-    gcpGroup: str
     users: List[str]
     attachedPosition: List[str]
-    updatetime: str
+
+
+class updateGroup(BaseModel):
+    description: str
+    users: List[str]
+    attachedPosition: List[str]
