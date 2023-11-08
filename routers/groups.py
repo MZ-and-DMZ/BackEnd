@@ -94,7 +94,7 @@ async def delete_group(group_name: str = Path(..., title="group name")):
     try:
         delete_result = collection.delete_one({"_id": group_name})  # 삭제
         if delete_result.deleted_count == 1:
-            return {"message": "user delete success"}
+            return {"message": "group delete success"}
         else:
             raise HTTPException(status_code=500, detail="deletion failed")
     except Exception as e:
