@@ -95,7 +95,7 @@ async def update_user(
         return {"message": "user update success"}
 
 
-@router.patch(path="/attach-position/{user_name}")
+@router.patch(path="/attach/position/{user_name}")
 async def attach_position(
     attachment_position: str = Body(..., title="position name"),
     user_name: str = Path(..., title="user name"),
@@ -103,6 +103,16 @@ async def attach_position(
     collection = mongodb.db["users"]
 
     print(attachment_position)
+
+
+@router.patch(path="/detach/position/{user_name}")
+async def detach_position(
+    detachment_position: str = Body(..., title="position name"),
+    user_name: str = Path(..., title="user name"),
+):
+    collection = mongodb.db["users"]
+
+    print(detachment_position)
 
 
 @router.delete(path="/delete/{user_name}")
