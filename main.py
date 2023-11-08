@@ -17,12 +17,16 @@ app.add_middleware(
     allow_headers=["*"],  # 모든 헤더 허용
 )
 
-app.include_router(auth.router)
-app.include_router(users.router)
-app.include_router(postitions.router)
-app.include_router(aws.router)
-app.include_router(gcp.router)
-app.include_router(groups.router)
+routers = [
+    auth.router,
+    users.router,
+    postitions.router,
+    aws.router,
+    gcp.router,
+    groups.router,
+]
+for router in routers:
+    app.include_router(router)
 
 
 @app.on_event("startup")

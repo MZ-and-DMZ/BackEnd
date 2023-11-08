@@ -18,3 +18,16 @@ async def get_aws_policy_list():
     res_json = {"aws_policy_list": bson_to_json(policy_list)}
 
     return JSONResponse(content=res_json, status_code=200)
+
+
+@router.get(path="/actioncrud")
+async def get_action_crud():
+    collection = mongodb.db["awsActionCRUD"]
+    try:
+        result = await collection.find().to_list(None)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    res_json = {"aws_action_crud": bson_to_json(result)}
+
+    return JSONResponse(content=res_json, status_code=200)
