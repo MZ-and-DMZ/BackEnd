@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException, Path
+from fastapi import APIRouter, Body, HTTPException, Path
 from fastapi.responses import JSONResponse
 
 from models import mongodb
@@ -93,6 +93,16 @@ async def update_user(
         # 여기에 함수 삽입
         # aws_iam_sync.user_update_sync(origin_user_data, new_user_data)
         return {"message": "user update success"}
+
+
+@router.patch(path="/attach-position/{user_name}")
+async def attach_position(
+    attachment_position: str = Body(..., title="position name"),
+    user_name: str = Path(..., title="user name"),
+):
+    collection = mongodb.db["users"]
+
+    print(attachment_position)
 
 
 @router.delete(path="/delete/{user_name}")
