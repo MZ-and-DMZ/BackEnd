@@ -12,12 +12,12 @@ class position(BaseModel):
     positionName: str
     description: str
     csp: str
-    policies: List[str]
+    policies: List[dict]
 
 
 class updatePosition(BaseModel):
     description: str
-    policies: List[str]
+    policies: List[dict]
 
 
 class user(BaseModel):

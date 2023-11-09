@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import List
 
 from fastapi import APIRouter, Body, HTTPException, Path
 from fastapi.responses import JSONResponse
@@ -95,24 +96,23 @@ async def update_user(
         return {"message": "user update success"}
 
 
-@router.patch(path="/attach/position/{user_name}")
+@router.patch(path="/position/{user_name}")
 async def attach_position(
-    attachment_position: str = Body(..., title="position name"),
+    new_position_list: List[str] = Body(..., title="new position list"),
     user_name: str = Path(..., title="user name"),
 ):
     collection = mongodb.db["users"]
+    find_result = await collection.find_one(
+        {"_id": user_name}, {"_id": 0, "attachedPosition": 1}
+    )
+    old_position_list = find_result["attachedPosition"]
 
-    print(attachment_position)
-
-
-@router.patch(path="/detach/position/{user_name}")
-async def detach_position(
-    detachment_position: str = Body(..., title="position name"),
-    user_name: str = Path(..., title="user name"),
-):
-    collection = mongodb.db["users"]
-
-    print(detachment_position)
+    update_result = await collection.update_one(
+        {"_id": user_name}, {"$set": {"attachedPosition": new_position_list}}
+    )
+    attachment_position = set(new_position_list) - set(old_position_list)
+    detachment_position = set(old_position_list) - set(new_position_list)
+    # func(att)
 
 
 @router.delete(path="/delete/{user_name}")
