@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 
 from models import mongodb
+from src.boto3_connect import iam_client
 from src.util import bson_to_json
 
 router = APIRouter(prefix="/aws", tags=["aws"])
@@ -31,3 +32,11 @@ async def get_action_crud():
     res_json = {"aws_action_crud": bson_to_json(result)}
 
     return JSONResponse(content=res_json, status_code=200)
+
+
+@router.get(path="/servicelist")
+async def get_service_list():
+    iam_client.session_connect()
+    services = iam_client.session.get_available_services()
+
+    return services
