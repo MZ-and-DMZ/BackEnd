@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 
 from models import mongodb
 from models.schemas import position, updatePosition
+from src.create_position_to_aws import create_position_aws
 from src.util import bson_to_json
 
 router = APIRouter(prefix="/positions", tags=["positions"])
@@ -54,6 +55,11 @@ async def create_position(position_data: position):
         raise HTTPException(status_code=500, detail=str(e))
 
     if insert_result.acknowledged:
+        if position_data.csp == "aws":
+            await create_position_aws(
+                position_name=position_data.positionName,
+                policies=position_data.policies,
+            )
         return JSONResponse(
             content={"message": f"{position_data.positionName} created successfully"},
             status_code=201,
