@@ -1,9 +1,10 @@
+import json
 from typing import List
 
 from models import mongodb
 from src import util
 
-# from .boto3_connect import iam_client
+from .boto3_connect import aws_sdk
 
 
 async def get_policy_docs(arns: List[str]):
@@ -38,11 +39,26 @@ async def policy_compress(docs_list):
 
 
 async def create_position_aws(position_name: str, policies: List[dict]):
+    aws_sdk.iam_connect()
     arns = []
     for policy in policies:
         arns.extend(list(policy.values()))
     docs_list = await get_policy_docs(arns)
     docs_list = await policy_compress(docs_list)
-
-    print(docs_list)
-    # for index, docs in enumerate(docs_list):
+    position_arns = []
+    policy_num = 1
+    for index, docs in enumerate(docs_list):
+        if isinstance(docs, int):
+            position_arns.append(arns[docs])
+            policy_num -= 1
+        else:
+            sdk_result = aws_sdk.client.create_policy(
+                PolicyName=f"{position_name}-{index+policy_num}",
+                PolicyDocument=json.dumps(docs),
+            )
+            position_arns.append(sdk_result["Policy"]["Arn"])
+    else:
+        aws_sdk.iam_close()
+    collection = mongodb.db["positionLink"]
+    schema = {"_id": position_name, "arns": position_arns}
+    insert_result = await collection.insert_one(schema)
