@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 
 from models import mongodb
 from models.schemas import updateUser, user
-from src.attach_policy import attach_policy
+from src.attach_policy import attach_policy, detach_policy
 from src.util import bson_to_json
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -95,8 +95,14 @@ async def update_user(
     if update_result.matched_count == 0:
         raise HTTPException(status_code=404, detail="user not found")
     else:
-        # 여기에 함수 삽입
-        # aws_iam_sync.user_update_sync(origin_user_data, new_user_data)
+        old_position_list = old_user_data["attachedPosition"]
+        new_position_list = new_user_data["attachedPosition"]
+        attachment_position = list(set(new_position_list) - set(old_position_list))
+        detachment_position = list(set(old_position_list) - set(new_position_list))
+        for position in detachment_position:
+            await detach_policy(user_name=user_name, position_name=position)
+        for position in attachment_position:
+            await attach_policy(user_name=user_name, position_name=position)
         return {"message": "user update success"}
 
 
