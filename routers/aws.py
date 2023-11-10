@@ -40,3 +40,8 @@ async def get_service_list():
     services = aws_sdk.session.get_available_services()
 
     return services
+
+
+@router.get(path="/user/list")
+async def get_user_list():
+    pass
