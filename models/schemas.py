@@ -22,6 +22,8 @@ class updatePosition(BaseModel):
 
 class user(BaseModel):
     userName: str
+    department: str
+    duty: str
     description: str
     awsAccount: str
     gcpAccount: str
@@ -30,6 +32,8 @@ class user(BaseModel):
 
 
 class updateUser(BaseModel):
+    department: str
+    duty: str
     description: str
     awsAccount: str
     gcpAccount: str
