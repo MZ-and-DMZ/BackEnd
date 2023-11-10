@@ -55,11 +55,11 @@ async def create_position(position_data: position):
         raise HTTPException(status_code=500, detail=str(e))
 
     if insert_result.acknowledged:
-        if position_data.csp == "aws":
-            await create_position_aws(
-                position_name=position_data.positionName,
-                policies=position_data.policies,
-            )
+        # if position_data.csp == "aws":
+        #     await create_position_aws(
+        #         position_name=position_data.positionName,
+        #         policies=position_data.policies,
+        #     )
         return JSONResponse(
             content={"message": f"{position_data.positionName} created successfully"},
             status_code=201,
