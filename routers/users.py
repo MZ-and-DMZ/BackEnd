@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 
 from models import mongodb
 from models.schemas import updateUser, user
+from src.attach_policy import attach_policy
 from src.util import bson_to_json
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -59,10 +60,13 @@ async def create_user(user_data: user):
         raise HTTPException(status_code=500, detail=str(e))
 
     if insert_result.acknowledged:
-        # if user_data.attachedPosition is None:
-        #     pass
-        # else:
-        #     aws_iam_sync.user_create_sync(user_data)
+        if user_data.attachedPosition is None:
+            pass
+        else:
+            for position in user_data.attachedPosition:
+                await attach_policy(
+                    user_name=user_data.userName, position_name=position
+                )
 
         return JSONResponse(
             content={"message": f"{user_data.userName} created successfully"},
