@@ -60,13 +60,13 @@ async def create_user(user_data: user):
         raise HTTPException(status_code=500, detail=str(e))
 
     if insert_result.acknowledged:
-        if user_data.attachedPosition is None:
-            pass
-        else:
-            for position in user_data.attachedPosition:
-                await attach_policy(
-                    user_name=user_data.userName, position_name=position
-                )
+        # if user_data.attachedPosition is None:
+        #     pass
+        # else:
+        #     for position in user_data.attachedPosition:
+        #         await attach_policy(
+        #             user_name=user_data.userName, position_name=position
+        #         )
 
         return JSONResponse(
             content={"message": f"{user_data.userName} created successfully"},
@@ -95,14 +95,14 @@ async def update_user(
     if update_result.matched_count == 0:
         raise HTTPException(status_code=404, detail="user not found")
     else:
-        old_position_list = old_user_data["attachedPosition"]
-        new_position_list = new_user_data["attachedPosition"]
-        attachment_position = list(set(new_position_list) - set(old_position_list))
-        detachment_position = list(set(old_position_list) - set(new_position_list))
-        for position in detachment_position:
-            await detach_policy(user_name=user_name, position_name=position)
-        for position in attachment_position:
-            await attach_policy(user_name=user_name, position_name=position)
+        # old_position_list = old_user_data["attachedPosition"]
+        # new_position_list = new_user_data["attachedPosition"]
+        # attachment_position = list(set(new_position_list) - set(old_position_list))
+        # detachment_position = list(set(old_position_list) - set(new_position_list))
+        # for position in detachment_position:
+        #     await detach_policy(user_name=user_name, position_name=position)
+        # for position in attachment_position:
+        #     await attach_policy(user_name=user_name, position_name=position)
         return {"message": "user update success"}
 
 
