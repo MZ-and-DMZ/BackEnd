@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 
 from models import mongodb
 from src.boto3_connect import aws_sdk
+from src.policy_recommend import find_best_awsPolicy
 from src.util import bson_to_json
 
 router = APIRouter(prefix="/aws", tags=["aws"])
@@ -45,3 +46,17 @@ async def get_service_list():
 @router.get(path="/user/list")
 async def get_user_list():
     pass
+
+
+@router.get(path="/recommend")
+async def get_recommend_policy():
+    a_as = {
+        "cloudwatch:DeleteAlarms",
+        "billing:GetSellerOfRecord",
+        "s3:GetObject",
+        "account:GetRegionOptStatus",
+        "ec2:DisassociateAddress",
+        "codebuild:StartBuild",
+    }
+    res = await find_best_awsPolicy(a_as)
+    return res
