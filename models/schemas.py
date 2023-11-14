@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -10,7 +10,7 @@ class auth(BaseModel):
 
 class position(BaseModel):
     positionName: str
-    description: str
+    description: Optional[str]
     csp: str
     policies: List[dict]
 
@@ -25,8 +25,8 @@ class user(BaseModel):
     department: str
     duty: str
     description: str
-    awsAccount: str
-    gcpAccount: str
+    awsAccount: Optional[str]
+    gcpAccount: Optional[str]
     attachedPosition: List[str]
     attachedGroup: List[str]
 

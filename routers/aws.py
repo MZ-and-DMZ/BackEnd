@@ -26,7 +26,7 @@ async def list_aws_policy():
 async def get_action_crud():
     collection = mongodb.db["awsActionCRUD"]
     try:
-        result = await collection.find().to_list(None)
+        result = await collection.find().sort([("_id", 1)]).to_list(None)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

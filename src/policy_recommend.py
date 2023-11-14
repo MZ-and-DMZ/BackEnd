@@ -231,7 +231,7 @@ async def get_aws_managed_policies():
                         allow_list.extend(statement["NotAction"])
                     else:
                         allow_list.extend([statement["NotAction"]])
-                    policy_dict[policy["PolicyName"]]["Deny"] = allow_list
+                    policy_dict[policy["PolicyName"]]["Allow"] = allow_list
         # put_actionlist_DB(client, policy['PolicyName'], allow_list, deny_list)
     return policy_dict
 
