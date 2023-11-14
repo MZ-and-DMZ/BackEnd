@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from models import mongodb
-from routers import auth, aws, gcp, groups, postitions, users
+from routers import auth, aws, gcp, groups, logging, postitions, users
 from src.config import conf
 
 app = FastAPI()
@@ -24,6 +24,7 @@ routers = [
     aws.router,
     gcp.router,
     groups.router,
+    logging.router,
 ]
 for router in routers:
     app.include_router(router)
