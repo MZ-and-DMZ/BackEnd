@@ -17,9 +17,22 @@ async def list_position():
         position_list = await collection.find().to_list(None)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
+    awsPolicies = mongodb.db["awsPolicies"]
+    gcpRoles = mongodb.db["gcpRoles"]
     for position in position_list:
         position["positionName"] = position.pop("_id")
+        if position["csp"] == "aws":
+            for policy in position["policies"]:
+                value = list(policy.values())[0]
+                print(value)
+                policy_data = await awsPolicies.find_one({"_id": value})
+                policy["description"] = policy_data["Description"]
+        elif position["csp"] == "gcp":
+            for policy in position["policies"]:
+                value = list(policy.values())[0]
+                print(value)
+                policy_data = await gcpRoles.find_one({"name": value})
+                policy["description"] = policy_data["description"]
 
     res_json = {"position_list": bson_to_json(position_list)}
 
