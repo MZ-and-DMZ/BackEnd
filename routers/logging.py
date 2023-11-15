@@ -74,7 +74,7 @@ async def get_logging_user_history(user_name: str = Path(..., title="user name")
     return JSONResponse(content=res_json, status_code=200)
 
 
-@router.get(path="/rollback/{user_name}")
+@router.post(path="/rollback/{user_name}")
 async def logging_rollback(version: int, user_name: str = Path(..., title="user name")):
     try:
         aws_sdk.iam_connect()
