@@ -48,15 +48,8 @@ async def get_user_list():
     pass
 
 
-@router.get(path="/recommend")
-async def get_recommend_policy():
-    a_as = {
-        "cloudwatch:DeleteAlarms",
-        "billing:GetSellerOfRecord",
-        "s3:GetObject",
-        "account:GetRegionOptStatus",
-        "ec2:DisassociateAddress",
-        "codebuild:StartBuild",
-    }
-    res = await find_best_awsPolicy(a_as)
+@router.post(path="/recommend")
+async def get_recommend_policy(actions):
+    action_set = set(actions)
+    res = await find_best_awsPolicy(action_set)
     return res
