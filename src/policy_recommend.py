@@ -245,7 +245,7 @@ async def find_best_awsPolicy(selected_action_set):
 
     # 한 개의 정책에 포함되는 경우
     if isContainedOne:
-        pass
+        return isContainedOne
     # 정책 조합이 필요한 경우
     else:
         # 교집합을 조합해서 {('정책명','정책명' -- ) : 개수}를 반환

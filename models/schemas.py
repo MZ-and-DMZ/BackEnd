@@ -52,3 +52,7 @@ class updateGroup(BaseModel):
     description: str
     users: List[str]
     attachedPosition: List[str]
+
+
+class recommedParams(BaseModel):
+    actions: List[str]
