@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 
 from models import mongodb
+from models.schemas import recommedParams
 from src.boto3_connect import aws_sdk
 from src.policy_recommend import find_best_awsPolicy
 from src.util import bson_to_json
@@ -51,7 +52,8 @@ async def get_user_list():
 
 
 @router.post(path="/recommend")
-async def get_recommend_policy(actions: List):
-    action_set = set(actions)
+async def get_recommend_policy(actions: recommedParams):
+    action_set = set(actions.actions)
+
     res = await find_best_awsPolicy(action_set)
     return res
