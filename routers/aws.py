@@ -1,3 +1,5 @@
+from typing import List
+
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 
@@ -49,7 +51,7 @@ async def get_user_list():
 
 
 @router.post(path="/recommend")
-async def get_recommend_policy(actions):
+async def get_recommend_policy(actions: List):
     action_set = set(actions)
     res = await find_best_awsPolicy(action_set)
     return res
