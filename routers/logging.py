@@ -222,6 +222,7 @@ async def get_combined_logging_list():
                                 "version": "$$this.version",
                                 "action": "$$this.action",
                                 "action_count": 0,  # 초기값 설정
+                                "action_list": [],  # 초기값 설정
                             },
                         }
                     },
@@ -235,6 +236,7 @@ async def get_combined_logging_list():
                 action_data = await action_collection.find_one({"_id": history_item["action"]})
                 if action_data:
                     history_item["action_count"] = len(action_data.get("action_list", []))
+                    history_item["action_list"] = action_data.get("action_list", [])
             logging_list.append(document)
 
     except Exception as e:
