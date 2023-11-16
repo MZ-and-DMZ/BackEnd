@@ -237,6 +237,9 @@ async def get_combined_logging_list():
                 if action_data:
                     history_item["action_count"] = len(action_data.get("action_list", []))
                     history_item["action_list"] = action_data.get("action_list", [])
+                    if not history_item["action_list"]:
+                        history_item["action_list"] = None
+                del history_item["action"]
             logging_list.append(document)
 
     except Exception as e:
