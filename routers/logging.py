@@ -207,40 +207,36 @@ async def delete_user_exception(user_name: str):
 @router.get(path="/list/all")
 async def get_combined_logging_list():
     try:
-        match_collection = mongodb.db["awsMatchUserAction"]
-        action_collection = mongodb.db["awsUserActions"]
+        collection = mongodb.db["awsMatchUserAction"]
         pipeline = [
-            {"$sort": {"updateTime": -1}},
+            {"$unwind": "$history"},
+            {"$sort": {"history.date": -1, "updateTime": -1}},
+            {
+                "$lookup": {
+                    "from": "awsUserActions",
+                    "localField": "history.action",
+                    "foreignField": "_id",
+                    "as": "action_data"
+                }
+            },
+            {"$unwind": {"path": "$action_data", "preserveNullAndEmptyArrays": True}},
             {
                 "$project": {
-                    "user_name": 1,
-                    "history": {
-                        "$map": {
-                            "input": {"$slice": ["$history", 5]},
-                            "in": {
-                                "date": {"$dateToString": {"format": "%Y-%m-%d", "date": "$$this.date"}},
-                                "version": "$$this.version",
-                                "action": "$$this.action",
-                                "action_count": 0,  # 초기값 설정
-                                "action_list": [],  # 초기값 설정
-                            },
-                        }
-                    },
+                    "_id": 0,
+                    "user_name": "$user_name",
+                    "date": {"$dateToString": {"format": "%Y-%m-%d", "date": "$history.date"}},
+                    "version": "$history.version",
+                    "action_count": {"$size": {"$ifNull": ["$action_data.action_list", []]}},
+                    "action_list": "$action_data.action_list",
                 }
             },
         ]
 
-        logging_list = []
-        async for document in match_collection.aggregate(pipeline):
-            for history_item in document["history"]:
-                action_data = await action_collection.find_one({"_id": history_item["action"]})
-                if action_data:
-                    history_item["action_count"] = len(action_data.get("action_list", []))
-                    history_item["action_list"] = action_data.get("action_list", [])
-                    if not history_item["action_list"]:
-                        history_item["action_list"] = None
-                del history_item["action"]
-            logging_list.append(document)
+        logging_list = await collection.aggregate(pipeline).to_list(None)
+
+        for item in logging_list:
+            if not item["action_list"]:
+                item["action_list"] = None
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -248,3 +244,49 @@ async def get_combined_logging_list():
     res_json = bson_to_json({"logging_list": logging_list})
 
     return JSONResponse(content=res_json, status_code=200)
+
+
+# @router.get(path="/list/all")
+# async def get_combined_logging_list():
+#     try:
+#         match_collection = mongodb.db["awsMatchUserAction"]
+#         action_collection = mongodb.db["awsUserActions"]
+#         pipeline = [
+#             {"$sort": {"updateTime": -1}},
+#             {
+#                 "$project": {
+#                     "user_name": 1,
+#                     "history": {
+#                         "$map": {
+#                             "input": {"$slice": ["$history", 5]},
+#                             "in": {
+#                                 "date": {"$dateToString": {"format": "%Y-%m-%d", "date": "$$this.date"}},
+#                                 "version": "$$this.version",
+#                                 "action": "$$this.action",
+#                                 "action_count": 0,  # 초기값 설정
+#                                 "action_list": [],  # 초기값 설정
+#                             },
+#                         }
+#                     },
+#                 }
+#             },
+#         ]
+
+#         logging_list = []
+#         async for document in match_collection.aggregate(pipeline):
+#             for history_item in document["history"]:
+#                 action_data = await action_collection.find_one({"_id": history_item["action"]})
+#                 if action_data:
+#                     history_item["action_count"] = len(action_data.get("action_list", []))
+#                     history_item["action_list"] = action_data.get("action_list", [])
+#                     if not history_item["action_list"]:
+#                         history_item["action_list"] = None
+#                 del history_item["action"]
+#             logging_list.append(document)
+
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+
+#     res_json = bson_to_json({"logging_list": logging_list})
+
+#     return JSONResponse(content=res_json, status_code=200)
