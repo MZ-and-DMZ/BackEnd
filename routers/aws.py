@@ -54,6 +54,10 @@ async def get_user_list():
 @router.post(path="/recommend")
 async def get_recommend_policy(actions: recommedParams):
     action_set = set(actions.actions)
-
-    res = await find_best_awsPolicy(action_set)
+    res = []
+    recommend_list = await find_best_awsPolicy(action_set)
+    if isinstance(recommend_list, str):
+        res.append(recommend_list)
+    else:
+        res.extend(recommend_list)
     return res
