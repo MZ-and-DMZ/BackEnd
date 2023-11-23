@@ -12,7 +12,10 @@ async def list_gcp_role():
     collection = mongodb.db["gcpRoles"]
     try:
         role_list = await collection.find(
-            {}, {"_id": 0, "name": 1, "title": 1, "description": 1}
+            {},
+            {
+                "_id": 0,
+            },
         ).to_list(None)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
