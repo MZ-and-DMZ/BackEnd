@@ -80,7 +80,7 @@ async def logging_rollback(version: int, user_name: str = Path(..., title="user 
         aws_sdk.iam_connect()
         iam_client = aws_sdk.client
         match_collection = mongodb.db["awsMatchUserAction"]
-        query_result = match_collection.find_one({"user_name": user_name})
+        query_result = await match_collection.find_one({"user_name": user_name})
 
         # 사용자에게 연결된 정책 분리 및 삭제
         if "attachedCustomerPolicy" in query_result:
@@ -100,7 +100,7 @@ async def logging_rollback(version: int, user_name: str = Path(..., title="user 
 
         # DB에 저장된 정책 문서 가져오기
         collection = mongodb.db["awsCustomerPolicy"]
-        document_result = collection.find_one({"_id": selected_arn})
+        document_result = await collection.find_one({"_id": selected_arn})
         policy_document = document_result["document"]
         # 정책 이름 설정
         policy_name = f"{user_name}-{selected_date.strftime('%Y-%m-%d')}"
@@ -113,7 +113,7 @@ async def logging_rollback(version: int, user_name: str = Path(..., title="user 
         # 사용자에게 정책 연결
         iam_client.attach_user_policy(UserName=user_name, PolicyArn=policy_arn)
 
-        match_collection.update_one(
+        await match_collection.update_one(
             {"user_name": user_name},
             {
                 "$set": {
