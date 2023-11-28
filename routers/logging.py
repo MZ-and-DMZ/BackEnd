@@ -103,7 +103,10 @@ async def logging_rollback(version: int, user_name: str = Path(..., title="user 
         document_result = await collection.find_one({"_id": selected_arn})
         policy_document = document_result["document"]
         # 정책 이름 설정
-        policy_name = f"{user_name}-{selected_date.strftime('%Y-%m-%d')}"
+        # ARN을 ':' 문자를 기준으로 분할하고 마지막 부분을 선택
+        policy_name_split = selected_arn.split(":")[-1]
+        # '/' 문자를 기준으로 분할하고 두 번째 부분을 선택
+        policy_name = policy_name_split.split("/")[1]
         # 고객 관리형 정책 생성
         response = iam_client.create_policy(
             PolicyName=policy_name, PolicyDocument=json.dumps(policy_document)
