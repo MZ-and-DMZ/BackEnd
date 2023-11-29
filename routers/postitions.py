@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 from models import mongodb
 from models.schemas import position, updatePosition
 
-# from src.create_position_to_aws import create_position_aws
+# from src.create_position import create_position_aws
 from src.util import bson_to_json
 
 router = APIRouter(prefix="/positions", tags=["positions"])
