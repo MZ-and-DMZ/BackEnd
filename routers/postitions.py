@@ -3,8 +3,7 @@ from fastapi.responses import JSONResponse
 
 from models import mongodb
 from models.schemas import position, updatePosition
-
-# from src.create_position import create_position_aws
+from src.create_position import create_position_aws
 from src.util import bson_to_json
 
 router = APIRouter(prefix="/positions", tags=["positions"])
@@ -57,21 +56,36 @@ async def get_position(position_name: str = Path(..., title="position name")):
 
 @router.post(path="/create")
 async def create_position(position_data: position):
-    collection = mongodb.db["positions"]
     insert_data = position_data.dict()
     insert_data["_id"] = insert_data.pop("positionName")
 
+    if position_data.csp == "aws":
+        policies = insert_data.pop("policies")
+        insert_data["policise"] = []
+        collection = mongodb.db["awsPolicies"]
+        for policy in policies:
+            policy_data = await collection.find_one({"PolicyName": policy})
+            data = {policy: policy_data["_id"]}
+            insert_data["policise"].append(data)
+        await create_position_aws(
+            position_name=insert_data["_id"],
+            policies=insert_data["policies"],
+        )
+    elif position_data.csp == "gcp":
+        policies = insert_data.pop("policies")
+        insert_data["policise"] = []
+        collection = mongodb.db["gcpRoles"]
+        for policy in policies:
+            policy_data = await collection.find_one({"title": policy})
+            data = {policy: policy_data["_id"]}
+            insert_data["policise"].append(data)
     try:
+        collection = mongodb.db["positions"]
         insert_result = await collection.insert_one(insert_data)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
     if insert_result.acknowledged:
-        # if position_data.csp == "aws":
-        #     await create_position_aws(
-        #         position_name=position_data.positionName,
-        #         policies=position_data.policies,
-        #     )
         return JSONResponse(
             content={"message": f"{position_data.positionName} created successfully"},
             status_code=201,
