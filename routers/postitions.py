@@ -29,7 +29,7 @@ async def list_position():
         elif position["csp"] == "gcp":
             for policy in position["policies"]:
                 value = list(policy.values())[0]
-                policy_data = await gcpRoles.find_one({"name": value})
+                policy_data = await gcpRoles.find_one({"_id": value})
                 policy["description"] = policy_data.get("Description")
 
     res_json = {"position_list": bson_to_json(position_list)}
@@ -94,7 +94,7 @@ async def create_position(position_data: position):
         raise HTTPException(status_code=500, detail="failed to create position")
 
 
-@router.put(path="/update/{position_name}")
+@router.patch(path="/update/{position_name}")
 async def update_position(
     position_data: updatePosition, position_name: str = Path(..., title="position name")
 ):
