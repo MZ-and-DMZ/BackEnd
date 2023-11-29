@@ -144,7 +144,7 @@ async def convert_positions(position_name: str = Path(..., title="position name"
     policies = position_data["policies"]
     convert_policies = []
     for policy in policies:
-        name = list(policy.values())
+        name = list(policy.keys())
         if position_data["csp"] == "aws":
             cursor = await collection.find_one({"aws": name[0]})
         elif position_data["csp"] == "gcp":
