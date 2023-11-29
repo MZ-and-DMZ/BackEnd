@@ -140,17 +140,23 @@ async def convert_positions(position_name: str = Path(..., title="position name"
     if position_data is None:
         raise HTTPException(status_code=404, detail="position not found")
 
-    collection = mongodb.db["awsPolicyRefer"]
+    collection = mongodb.db["positionConvert"]
     policies = position_data["policies"]
     convert_policies = []
     for policy in policies:
-        arn = list(policy.values())
-        cursor = await collection.find_one({"_id": arn[0]})
+        name = list(policy.values())
+        if position_data["csp"] == "aws":
+            cursor = await collection.find_one({"aws": name[0]})
+        elif position_data["csp"] == "gcp":
+            cursor = await collection.find_one({"gcp": name[0]})
         if cursor is None:
             continue
         else:
-            role_list = list(cursor["gcp"][0].values())
-            convert_policies.extend(role_list)
+            if position_data["csp"] == "aws":
+                convert_name = cursor["gcp"]
+            elif position_data["csp"] == "gcp":
+                convert_name = cursor["aws"]
+            convert_policies.append(convert_name)
 
     res_json = {"convert_policies": list(set(convert_policies))}
 
