@@ -1,9 +1,12 @@
+import asyncio
+
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 
 from models import mongodb
 from models.schemas import recommedParams
 from src.boto3_connect import aws_sdk
+from src.get_unused_user import is_unused
 from src.policy_recommend import find_best_awsPolicy
 from src.util import bson_to_json
 
@@ -63,3 +66,17 @@ async def get_recommend_policy(actions: recommedParams):
     else:
         res.extend(recommend_list)
     return res
+
+
+@router.get(path="/unused-account")
+async def get_unused_account():
+    collection = mongodb.db["awsUsers"]
+    aws_sdk.trail_connect()
+    client = aws_sdk.client
+    user_list = await collection.find({}, {"_id": 0, "UserName": 1}).to_list(None)
+    tasks = [
+        asyncio.create_task(is_unused(client, list(user_name.values())[0]))
+        for user_name in user_list
+    ]
+    results = await asyncio.gather(*tasks)
+    return [item for item in results if item is not None]
