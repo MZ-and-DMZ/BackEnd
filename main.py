@@ -13,7 +13,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # 모든 출처 허용
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "CONNECT", "TRACE"],
+    allow_methods=["*"],
     allow_headers=["*"],  # 모든 헤더 허용
 )
 
