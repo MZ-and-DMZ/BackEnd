@@ -25,7 +25,7 @@ async def list_position():
         if position["csp"] == "aws":
             for policy in position["policies"]:
                 value = list(policy.values())[0]
-                policy_data = await awsPolicies.find_one({"Arn": value})
+                policy_data = await awsPolicies.find_one({"_id": value})
                 policy["description"] = policy_data.get("Description")
         elif position["csp"] == "gcp":
             for policy in position["policies"]:
