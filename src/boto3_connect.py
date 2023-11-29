@@ -14,6 +14,13 @@ class awsSdk:
             aws_secret_access_key=conf["aws_secret_access_key"],
         )
 
+    def trail_connect(self):
+        self.client = boto3.client(
+            "cloudtrail",
+            aws_access_key_id=conf["aws_access_key_id"],
+            aws_secret_access_key=conf["aws_secret_access_key"],
+        )
+
     def session_connect(self):
         self.session = boto3.Session(
             aws_access_key_id=conf["aws_access_key_id"],
