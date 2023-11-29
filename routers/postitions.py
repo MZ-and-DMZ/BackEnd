@@ -61,12 +61,12 @@ async def create_position(position_data: position):
 
     if position_data.csp == "aws":
         policies = insert_data.pop("policies")
-        insert_data["policise"] = []
+        insert_data["policies"] = []
         collection = mongodb.db["awsPolicies"]
         for policy in policies:
             policy_data = await collection.find_one({"PolicyName": policy})
             data = {policy: policy_data["_id"]}
-            insert_data["policise"].append(data)
+            insert_data["policies"].append(data)
         await create_position_aws(
             position_name=insert_data["_id"],
             policies=insert_data["policies"],
