@@ -15,7 +15,7 @@ async def list_aws_policy():
     collection = mongodb.db["awsPolicies"]
     try:
         policy_list = await collection.find(
-            {}, {"_id": 0, "PolicyName": 1, "Description": 1, "CreateDate": 1}
+            {}, {"_id": 0, "Arn": 1, "PolicyName": 1, "Description": 1, "CreateDate": 1}
         ).to_list(None)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
