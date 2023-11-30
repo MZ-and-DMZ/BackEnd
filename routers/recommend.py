@@ -1,18 +1,18 @@
 from fastapi import APIRouter, Body, HTTPException, Path
 from fastapi.responses import JSONResponse
 
-from models import mongodb
 from models.schemas import recommendParams
+from src.policy_recommend import find_best_awsPolicy, find_best_gcpRole
 from src.util import bson_to_json
 
 router = APIRouter(prefix="/recommend", tags=["recommend"])
 
 
-@router.get(path="/{csp}")
+@router.post(path="/{csp}")
 async def recommend(
     csp: str = Path(..., title="csp"), actions: recommendParams = Body(...)
 ):
     if csp == "aws":
-        pass
+        return await find_best_awsPolicy(set(actions.actions))
     elif csp == "gcp":
-        pass
+        return await find_best_gcpRole(set(actions.actions))
