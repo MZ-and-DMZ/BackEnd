@@ -17,6 +17,7 @@ class awsSdk:
     def trail_connect(self):
         self.client = boto3.client(
             "cloudtrail",
+            region_name="us-east-1",
             aws_access_key_id=conf["aws_access_key_id"],
             aws_secret_access_key=conf["aws_secret_access_key"],
         )

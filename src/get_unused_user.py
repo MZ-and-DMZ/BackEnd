@@ -13,7 +13,7 @@ async def is_unused(client, user_name):
         ],
         StartTime=start_date,
         EndTime=end_date,
-        MaxResults=1,  # 결과의 최대 개수 (조정 가능)
+        MaxResults=1,
     )
     if not response["Events"]:
         return user_name
