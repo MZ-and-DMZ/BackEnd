@@ -4,7 +4,6 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 
 from models import mongodb
-from models.schemas import recommedParams
 from src.boto3_connect import aws_sdk
 from src.get_unused_user import is_unused
 from src.policy_recommend import find_best_awsPolicy
