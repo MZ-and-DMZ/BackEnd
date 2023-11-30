@@ -54,5 +54,5 @@ class updateGroup(BaseModel):
     attachedPosition: List[str]
 
 
-class recommedParams(BaseModel):
+class recommendParams(BaseModel):
     actions: List[str]

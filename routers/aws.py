@@ -51,23 +51,6 @@ async def get_service_list():
     return services
 
 
-@router.get(path="/user/list")
-async def get_user_list():
-    pass
-
-
-@router.post(path="/recommend")
-async def get_recommend_policy(actions: recommedParams):
-    action_set = set(actions.actions)
-    res = []
-    recommend_list = await find_best_awsPolicy(action_set)
-    if isinstance(recommend_list, str):
-        res.append(recommend_list)
-    else:
-        res.extend(recommend_list)
-    return res
-
-
 @router.get(path="/unused-account")
 async def get_unused_account():
     collection = mongodb.db["awsUsers"]
