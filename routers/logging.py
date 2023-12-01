@@ -157,7 +157,9 @@ async def get_duration_value():
         query_result = await collection.find_one({"csp": "aws"})
 
         if query_result and "duration" in query_result:
-            res_json = bson_to_json({"duration": query_result["duration"]})
+            duration = query_result["duration"]
+            res_json = bson_to_json({"duration": duration})
+
             return JSONResponse(content=res_json, status_code=200)
         else:
             raise HTTPException(status_code=404, detail="duration not found")
