@@ -18,5 +18,7 @@ async def list_notification():
     for notification in notification_list:
         notification["_id"] = str(notification["_id"])
     res_json = {"notification_list": bson_to_json(notification_list)}
-
+    collection.update_many(
+        {"isRead": False}, {"$set": {"isRead": True}}
+    )  # api 호출 시 읽었다고 간주
     return JSONResponse(content=res_json, status_code=200)
