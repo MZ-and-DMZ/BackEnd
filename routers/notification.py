@@ -22,3 +22,16 @@ async def list_notification():
         {"isRead": False}, {"$set": {"isRead": True}}
     )  # api 호출 시 읽었다고 간주
     return JSONResponse(content=res_json, status_code=200)
+
+
+@router.get(path="/check-new")
+async def list_notification():
+    collection = mongodb.db["notification"]
+    try:
+        is_new = await collection.find({"isRead": False}).to_list(1)
+        if is_new:
+            return True
+        else:
+            return False
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
