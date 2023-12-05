@@ -6,7 +6,6 @@ from fastapi.responses import JSONResponse
 from models import mongodb
 from src.boto3_connect import aws_sdk
 from src.get_unused_user import is_unused
-from src.policy_recommend import find_best_awsPolicy
 from src.util import bson_to_json
 
 router = APIRouter(prefix="/aws", tags=["aws"])
