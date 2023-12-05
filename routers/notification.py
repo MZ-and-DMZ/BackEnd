@@ -25,7 +25,7 @@ async def list_notification():
 
 
 @router.get(path="/check-new")
-async def list_notification():
+async def check_new_notification():
     collection = mongodb.db["notification"]
     try:
         is_new = await collection.find({"isRead": False}).to_list(1)
