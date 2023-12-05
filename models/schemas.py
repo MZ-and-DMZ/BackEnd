@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from pydantic import BaseModel
 
@@ -56,3 +56,10 @@ class updateGroup(BaseModel):
 
 class recommendParams(BaseModel):
     actions: List[str]
+
+
+class notification(BaseModel):
+    type: str
+    title: str
+    content: str
+    detail: Any
