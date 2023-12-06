@@ -3,19 +3,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
-from models import mongodb
-from routers import (
-    auth,
-    aws,
-    gcp,
-    groups,
-    logging,
-    notification,
-    postitions,
-    recommend,
-    users,
-)
-from src.config import conf
+from routers import routers
+from src.config import settings
+from src.database import mongodb
 
 app = FastAPI()
 
@@ -27,24 +17,13 @@ app.add_middleware(
     allow_headers=["*"],  # 모든 헤더 허용
 )
 
-routers = [
-    auth.router,
-    users.router,
-    postitions.router,
-    aws.router,
-    gcp.router,
-    groups.router,
-    logging.router,
-    recommend.router,
-    notification.router,
-]
 for router in routers:
     app.include_router(router)
 
 
 @app.on_event("startup")
 async def startup_event():
-    mongodb.connect(conf["db_server_url"])
+    mongodb.connect(settings["db_server_url"])
 
 
 @app.on_event("shutdown")

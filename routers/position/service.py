@@ -1,10 +1,11 @@
 import json
 from typing import List
 
-from models import mongodb
-from src import util
+from src.aws_policy_control import delete_policy
+from src.boto3_connect import aws_sdk
+from src.database import mongodb
 
-from .boto3_connect import aws_sdk
+from .utils import *
 
 
 async def get_policy_docs(arns: List[str]):
@@ -15,7 +16,7 @@ async def get_policy_docs(arns: List[str]):
         _, policy_name = map(str, arn.split("/"))
         find_result = await collection.find_one({"_id": arn})
         for index, statement in enumerate(find_result["Document"]["Statement"]):
-            statement["Sid"] = util.remove_special_characters(f"{policy_name}{index+1}")
+            statement["Sid"] = remove_special_characters(f"{policy_name}{index+1}")
         docs_list.append(find_result["Document"])
 
     return docs_list
@@ -25,8 +26,8 @@ async def policy_compress(docs_list):
     result_docs_list = []
     string_length = []
     for docs in docs_list:
-        string_length.append(util.count_string(docs["Statement"]))
-    index_set = util.calculate_set(string_length)
+        string_length.append(count_string(docs["Statement"]))
+    index_set = calculate_set(string_length)
     for set in index_set:
         if isinstance(set, int):
             result_docs_list.append(set)
@@ -62,3 +63,11 @@ async def create_position_aws(position_name: str, policies: List[dict]):
     collection = mongodb.db["positionLink"]
     schema = {"_id": position_name, "arns": position_arns}
     insert_result = await collection.insert_one(schema)
+
+
+async def delete_position_link_policy(arns: List[str]) -> None:
+    for arn in arns:
+        if not "arn:aws:iam::aws:policy/" in arn:
+            await delete_policy(arn)
+        else:
+            continue
