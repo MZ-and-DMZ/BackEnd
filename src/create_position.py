@@ -1,8 +1,8 @@
 import json
 from typing import List
 
-from models import mongodb
 from src import util
+from src.database import mongodb
 
 from .boto3_connect import aws_sdk
 

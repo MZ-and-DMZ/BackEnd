@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 
-from models import mongodb
+from src.database import mongodb
 from src.util import bson_to_json
 
 router = APIRouter(prefix="/gcp", tags=["gcp"])

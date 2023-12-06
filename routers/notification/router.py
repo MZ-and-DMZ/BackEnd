@@ -3,9 +3,10 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 
-from models import mongodb
-from models.schemas import notification
+from src.database import mongodb
 from src.util import bson_to_json
+
+from .schema import *
 
 router = APIRouter(prefix="/notification", tags=["notification"])
 

@@ -1,4 +1,5 @@
-import json
+from dynaconf import Dynaconf
 
-with open("./config/conf.json", "r") as json_file:
-    conf = json.load(json_file)
+settings = Dynaconf(
+    settings_files=["config/config.json"],
+)

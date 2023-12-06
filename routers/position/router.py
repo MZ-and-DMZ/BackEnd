@@ -1,11 +1,12 @@
 from fastapi import APIRouter, HTTPException, Path
 from fastapi.responses import JSONResponse
 
-from models import mongodb
-from models.schemas import position, updatePosition
 from src.aws_policy_control import delete_policy
 from src.create_position import create_position_aws
+from src.database import mongodb
 from src.util import bson_to_json
+
+from .schema import *
 
 router = APIRouter(prefix="/positions", tags=["positions"])
 

@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 
-from models import mongodb
 from models.schemas import auth
+from src.database import mongodb
 from src.login import verify_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])

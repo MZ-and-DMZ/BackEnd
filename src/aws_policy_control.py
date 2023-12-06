@@ -1,4 +1,4 @@
-from models import mongodb
+from src.database import mongodb
 
 from .boto3_connect import aws_sdk
 

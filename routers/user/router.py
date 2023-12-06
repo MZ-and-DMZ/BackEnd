@@ -4,10 +4,11 @@ from typing import List
 from fastapi import APIRouter, Body, HTTPException, Path
 from fastapi.responses import JSONResponse
 
-from models import mongodb
-from models.schemas import updateUser, user
 from src.aws_policy_control import attach_policy, detach_policy
+from src.database import mongodb
 from src.util import bson_to_json
+
+from .schema import *
 
 router = APIRouter(prefix="/users", tags=["users"])
 

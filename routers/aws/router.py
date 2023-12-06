@@ -1,11 +1,8 @@
-import asyncio
-
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 
-from models import mongodb
 from src.boto3_connect import aws_sdk
-from src.get_unused_user import is_unused
+from src.database import mongodb
 from src.util import bson_to_json
 
 router = APIRouter(prefix="/aws", tags=["aws"])
@@ -47,17 +44,3 @@ async def get_service_list():
     services = aws_sdk.session.get_available_services()
 
     return services
-
-
-@router.get(path="/unused-account")
-async def get_unused_account():
-    collection = mongodb.db["awsUsers"]
-    aws_sdk.trail_connect()
-    client = aws_sdk.client
-    user_list = await collection.find({}, {"_id": 0, "UserName": 1}).to_list(None)
-    tasks = [
-        asyncio.create_task(is_unused(client, list(user_name.values())[0]))
-        for user_name in user_list
-    ]
-    results = await asyncio.gather(*tasks)
-    return [item for item in results if item is not None]
