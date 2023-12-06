@@ -4,9 +4,9 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 
 from src.database import mongodb
-from src.util import bson_to_json
+from src.utils import bson_to_json
 
-from .schema import *
+from .schemas import *
 
 router = APIRouter(prefix="/notification", tags=["notification"])
 

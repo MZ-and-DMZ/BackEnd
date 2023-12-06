@@ -7,7 +7,7 @@ class MongoDB:
 
     def connect(self, db_server_url):
         self.client = AsyncIOMotorClient(db_server_url)
-        self.db_Boch = self.client["Boch"]
+        self.db = self.client["Boch"]
 
     def close(self):
         self.client.close()
