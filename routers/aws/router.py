@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 
 from src.boto3_connect import aws_sdk
 from src.database import mongodb
-from src.util import bson_to_json
+from src.utils import bson_to_json
 
 router = APIRouter(prefix="/aws", tags=["aws"])
 
