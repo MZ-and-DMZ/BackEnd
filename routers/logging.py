@@ -165,7 +165,8 @@ async def get_duration_value():
 async def add_user_exception(user_name: str):
     try:
         collection = mongodb.db["awsLoggingUserException"]
-        query_result = await collection.insert_one({"_id": user_name})
+        current_time = datetime.now()
+        query_result = await collection.insert_one({"_id": user_name, "updateTime": current_time})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -183,6 +184,8 @@ async def get_user_exception_list():
     try:
         collection = mongodb.db["awsLoggingUserException"]
         query_result = await collection.find().to_list(length=None)
+        for user in query_result:
+            user['updateTime'] = user['updateTime'].strftime('%Y-%m-%d')
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
