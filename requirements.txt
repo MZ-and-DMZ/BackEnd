@@ -4,3 +4,4 @@ pydantic
 bcrypt
 boto3
 motor
+dynaconf

@@ -1,11 +1,14 @@
+from datetime import datetime
+
 from fastapi import APIRouter, HTTPException, Path
 from fastapi.responses import JSONResponse
 
-from models import mongodb
-from models.schemas import position, updatePosition
-from src.aws_policy_control import delete_policy
-from src.create_position import create_position_aws
-from src.util import bson_to_json
+from src.aws_policy_control import *
+from src.database import mongodb
+from src.utils import bson_to_json
+
+from .schemas import *
+from .service import *
 
 router = APIRouter(prefix="/positions", tags=["positions"])
 
@@ -59,7 +62,7 @@ async def get_position(position_name: str = Path(..., title="position name")):
 async def create_position(position_data: position):
     insert_data = position_data.dict()
     insert_data["_id"] = insert_data.pop("positionName")
-
+    insert_data["attachedUser"] = []
     if position_data.csp == "aws":
         policies = insert_data.pop("policies")
         insert_data["policies"] = []
@@ -88,7 +91,7 @@ async def create_position(position_data: position):
 
     if insert_result.acknowledged:
         return JSONResponse(
-            content={"message": f"{position_data.positionName} created successfully"},
+            content=insert_data,
             status_code=201,
         )
     else:
@@ -121,25 +124,40 @@ async def delete_positions(position_name: str = Path(..., title="position name")
         position_collection = mongodb.db["positions"]
         position_data = await position_collection.find_one({"_id": position_name})
 
-        if position_data is None:  # 삭제할 position이 없는 경우 raise
+        # 삭제할 position이 없는 경우 raise
+        if position_data is None:
             raise HTTPException(status_code=404, detail=f"{position_name} not found")
 
+        # csp별 로직 분리
         if position_data["csp"] == "aws":
             position_link_collection = mongodb.db["positionLink"]
             position_link_data = await position_link_collection.find_one(
                 {"_id": position_name}
             )
-            for arn in position_link_data["arns"]:
-                if not "arn:aws:iam::aws:policy/" in arn:
-                    await delete_policy(arn)
-                else:
-                    continue
+            # 합쳐놓은 aws 커스텀 정책 삭제
+            await delete_position_link_policy(position_link_data["arns"])
+            # db 데이터 삭제
             await position_link_collection.delete_one({"_id": position_name})
-
         elif position_data["csp"] == "gcp":
             pass
 
         # 연결된 유저에서 삭제
+        user_collection = mongodb.db["users"]
+        for user_name in position_data["attachedUser"]:
+            user_positions = await user_collection.find_one(
+                {"_id": user_name}, {"_id": 0, "attachedPosition": 1}
+            )
+            new_user_positions = user_positions["attachedPosition"]
+            new_user_positions.pop(new_user_positions.index(position_name))
+            await user_collection.update_one(
+                {"_id": user_name},
+                {
+                    "$set": {
+                        "attachedPosition": new_user_positions,
+                        "updatetime": datetime.now(),
+                    }
+                },
+            )
 
         delete_result = await position_collection.delete_one(
             {"_id": position_name}

@@ -1,12 +1,4 @@
-import json
 import re
-
-from bson import json_util
-
-
-# bson -> json str
-def bson_to_json(data):
-    return json.loads(json_util.dumps(data))
 
 
 # 문자열 특수문자 제거 후 반환

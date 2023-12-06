@@ -3,9 +3,10 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException, Path
 from fastapi.responses import JSONResponse
 
-from models import mongodb
-from models.schemas import group, updateGroup
-from src.util import bson_to_json
+from src.database import mongodb
+from src.utils import bson_to_json
+
+from .schemas import *
 
 router = APIRouter(prefix="/groups", tags=["groups"])
 
