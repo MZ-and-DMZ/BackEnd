@@ -4,8 +4,8 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException, Path
 from fastapi.responses import JSONResponse
 
-from models import mongodb
 from src.boto3_connect import aws_sdk
+from src.database import mongodb
 from src.util import bson_to_json
 
 router = APIRouter(prefix="/logging", tags=["logging"])
@@ -222,7 +222,7 @@ async def get_combined_logging_list():
                     "from": "awsUserActions",
                     "localField": "history.action",
                     "foreignField": "_id",
-                    "as": "action_data"
+                    "as": "action_data",
                 }
             },
             {"$unwind": {"path": "$action_data", "preserveNullAndEmptyArrays": True}},
@@ -230,9 +230,13 @@ async def get_combined_logging_list():
                 "$project": {
                     "_id": 0,
                     "user_name": "$user_name",
-                    "date": {"$dateToString": {"format": "%Y-%m-%d", "date": "$history.date"}},
+                    "date": {
+                        "$dateToString": {"format": "%Y-%m-%d", "date": "$history.date"}
+                    },
                     "version": "$history.version",
-                    "action_count": {"$size": {"$ifNull": ["$action_data.action_list", []]}},
+                    "action_count": {
+                        "$size": {"$ifNull": ["$action_data.action_list", []]}
+                    },
                     "action_list": "$action_data.action_list",
                 }
             },

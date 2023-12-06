@@ -1,7 +1,7 @@
 import re
 from itertools import combinations
 
-from models import mongodb
+from src.database import mongodb
 
 
 async def check(pattern, action):
