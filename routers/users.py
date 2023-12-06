@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 
 from models import mongodb
 from models.schemas import updateUser, user
-from src.attach_policy import attach_policy, detach_policy
+from src.aws_policy_control import attach_policy, detach_policy
 from src.util import bson_to_json
 
 router = APIRouter(prefix="/users", tags=["users"])

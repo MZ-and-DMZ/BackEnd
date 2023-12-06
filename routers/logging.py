@@ -80,7 +80,7 @@ async def logging_rollback(version: int, user_name: str = Path(..., title="user 
         aws_sdk.iam_connect()
         iam_client = aws_sdk.client
         match_collection = mongodb.db["awsMatchUserAction"]
-        query_result = match_collection.find_one({"user_name": user_name})
+        query_result = await match_collection.find_one({"user_name": user_name})
 
         # 사용자에게 연결된 정책 분리 및 삭제
         if "attachedCustomerPolicy" in query_result:
@@ -100,10 +100,13 @@ async def logging_rollback(version: int, user_name: str = Path(..., title="user 
 
         # DB에 저장된 정책 문서 가져오기
         collection = mongodb.db["awsCustomerPolicy"]
-        document_result = collection.find_one({"_id": selected_arn})
+        document_result = await collection.find_one({"_id": selected_arn})
         policy_document = document_result["document"]
         # 정책 이름 설정
-        policy_name = f"{user_name}-{selected_date.strftime('%Y-%m-%d')}"
+        # ARN을 ':' 문자를 기준으로 분할하고 마지막 부분을 선택
+        policy_name_split = selected_arn.split(":")[-1]
+        # '/' 문자를 기준으로 분할하고 두 번째 부분을 선택
+        policy_name = policy_name_split.split("/")[1]
         # 고객 관리형 정책 생성
         response = iam_client.create_policy(
             PolicyName=policy_name, PolicyDocument=json.dumps(policy_document)
@@ -113,7 +116,7 @@ async def logging_rollback(version: int, user_name: str = Path(..., title="user 
         # 사용자에게 정책 연결
         iam_client.attach_user_policy(UserName=user_name, PolicyArn=policy_arn)
 
-        match_collection.update_one(
+        await match_collection.update_one(
             {"user_name": user_name},
             {
                 "$set": {
@@ -136,7 +139,7 @@ async def set_duration_value(duration: int):
     try:
         collection = mongodb.db["loggingDuration"]
         query_result = await collection.update_one(
-            {}, {"$set": {"duration": duration}}, upsert=True
+            {"csp": "aws"}, {"$set": {"duration": duration}}, upsert=True
         )
 
         if query_result.modified_count == 1 or query_result.upserted_id:
@@ -151,10 +154,13 @@ async def set_duration_value(duration: int):
 async def get_duration_value():
     try:
         collection = mongodb.db["loggingDuration"]
-        query_result = await collection.find_one({})
+        query_result = await collection.find_one({"csp": "aws"})
 
         if query_result and "duration" in query_result:
-            return {"duration": query_result["duration"]}
+            duration = query_result["duration"]
+            res_json = bson_to_json({"duration": duration})
+
+            return JSONResponse(content=res_json, status_code=200)
         else:
             raise HTTPException(status_code=404, detail="duration not found")
     except Exception as e:
