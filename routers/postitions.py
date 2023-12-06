@@ -3,7 +3,8 @@ from fastapi.responses import JSONResponse
 
 from models import mongodb
 from models.schemas import position, updatePosition
-from src.create_position_to_aws import create_position_aws
+from src.aws_policy_control import delete_policy
+from src.create_position import create_position_aws
 from src.util import bson_to_json
 
 router = APIRouter(prefix="/positions", tags=["positions"])
@@ -25,12 +26,12 @@ async def list_position():
             for policy in position["policies"]:
                 value = list(policy.values())[0]
                 policy_data = await awsPolicies.find_one({"_id": value})
-                policy["description"] = policy_data["Description"]
+                policy["description"] = policy_data.get("Description")
         elif position["csp"] == "gcp":
             for policy in position["policies"]:
                 value = list(policy.values())[0]
-                policy_data = await gcpRoles.find_one({"name": value})
-                policy["description"] = policy_data["description"]
+                policy_data = await gcpRoles.find_one({"_id": value})
+                policy["description"] = policy_data.get("Description")
 
     res_json = {"position_list": bson_to_json(position_list)}
 
@@ -56,21 +57,36 @@ async def get_position(position_name: str = Path(..., title="position name")):
 
 @router.post(path="/create")
 async def create_position(position_data: position):
-    collection = mongodb.db["positions"]
     insert_data = position_data.dict()
     insert_data["_id"] = insert_data.pop("positionName")
 
+    if position_data.csp == "aws":
+        policies = insert_data.pop("policies")
+        insert_data["policies"] = []
+        collection = mongodb.db["awsPolicies"]
+        for policy in policies:
+            policy_data = await collection.find_one({"PolicyName": policy})
+            data = {policy: policy_data["_id"]}
+            insert_data["policies"].append(data)
+        await create_position_aws(
+            position_name=insert_data["_id"],
+            policies=insert_data["policies"],
+        )
+    elif position_data.csp == "gcp":
+        policies = insert_data.pop("policies")
+        insert_data["policise"] = []
+        collection = mongodb.db["gcpRoles"]
+        for policy in policies:
+            policy_data = await collection.find_one({"title": policy})
+            data = {policy: policy_data["_id"]}
+            insert_data["policise"].append(data)
     try:
+        collection = mongodb.db["positions"]
         insert_result = await collection.insert_one(insert_data)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
     if insert_result.acknowledged:
-        if position_data.csp == "aws":
-            await create_position_aws(
-                position_name=position_data.positionName,
-                policies=position_data.policies,
-            )
         return JSONResponse(
             content={"message": f"{position_data.positionName} created successfully"},
             status_code=201,
@@ -79,7 +95,7 @@ async def create_position(position_data: position):
         raise HTTPException(status_code=500, detail="failed to create position")
 
 
-@router.put(path="/update/{position_name}")
+@router.patch(path="/update/{position_name}")
 async def update_position(
     position_data: updatePosition, position_name: str = Path(..., title="position name")
 ):
@@ -101,16 +117,44 @@ async def update_position(
 
 @router.delete(path="/delete/{position_name}")
 async def delete_positions(position_name: str = Path(..., title="position name")):
-    collection = mongodb.db["positions"]
-
     try:
-        delete_result = await collection.delete_one({"_id": position_name})  # 삭제
+        position_collection = mongodb.db["positions"]
+        position_data = await position_collection.find_one({"_id": position_name})
+
+        if position_data is None:  # 삭제할 position이 없는 경우 raise
+            raise HTTPException(status_code=404, detail=f"{position_name} not found")
+
+        if position_data["csp"] == "aws":
+            position_link_collection = mongodb.db["positionLink"]
+            position_link_data = await position_link_collection.find_one(
+                {"_id": position_name}
+            )
+            for arn in position_link_data["arns"]:
+                if not "arn:aws:iam::aws:policy/" in arn:
+                    await delete_policy(arn)
+                else:
+                    continue
+            await position_link_collection.delete_one({"_id": position_name})
+
+        elif position_data["csp"] == "gcp":
+            pass
+
+        # 연결된 유저에서 삭제
+
+        delete_result = await position_collection.delete_one(
+            {"_id": position_name}
+        )  # 삭제
+
         if delete_result.deleted_count == 1:
             return {"message": "position delete success"}
         else:
             raise HTTPException(status_code=500, detail="deletion failed")
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        if isinstance(e, HTTPException):
+            raise
+        else:
+            raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get(path="/convert/{position_name}")
@@ -125,17 +169,23 @@ async def convert_positions(position_name: str = Path(..., title="position name"
     if position_data is None:
         raise HTTPException(status_code=404, detail="position not found")
 
-    collection = mongodb.db["awsPolicyRefer"]
+    collection = mongodb.db["positionConvert"]
     policies = position_data["policies"]
     convert_policies = []
     for policy in policies:
-        arn = list(policy.values())
-        cursor = await collection.find_one({"_id": arn[0]})
+        name = list(policy.keys())
+        if position_data["csp"] == "aws":
+            cursor = await collection.find_one({"aws": name[0]})
+        elif position_data["csp"] == "gcp":
+            cursor = await collection.find_one({"gcp": name[0]})
         if cursor is None:
             continue
         else:
-            role_list = list(cursor["gcp"][0].values())
-            convert_policies.extend(role_list)
+            if position_data["csp"] == "aws":
+                convert_name = cursor["gcp"]
+            elif position_data["csp"] == "gcp":
+                convert_name = cursor["aws"]
+            convert_policies.append(convert_name)
 
     res_json = {"convert_policies": list(set(convert_policies))}
 
