@@ -60,7 +60,7 @@ async def get_position(position_name: str = Path(..., title="position name")):
 async def create_position(position_data: position):
     insert_data = position_data.dict()
     insert_data["_id"] = insert_data.pop("positionName")
-
+    insert_data["attachedUser"] = []
     if position_data.csp == "aws":
         policies = insert_data.pop("policies")
         insert_data["policies"] = []
