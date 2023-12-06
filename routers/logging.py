@@ -189,9 +189,24 @@ async def add_user_exception(user_name: str):
 async def get_user_exception_list():
     try:
         collection = mongodb.db["awsLoggingUserException"]
+        aws_users_collection = mongodb.db["awsUsers"]
+        users_collection = mongodb.db["users"]
         query_result = await collection.find().to_list(length=None)
+
         for user in query_result:
             user['updateTime'] = user['updateTime'].strftime('%Y-%m-%d')
+
+            aws_user = await aws_users_collection.find_one({"UserName": user["_id"]})
+            if aws_user and 'Groups' in aws_user and aws_user['Groups']:
+                user['groups'] = aws_user['Groups']
+            else:
+                user['groups'] = None
+
+            boch_user = await users_collection.find_one({"_id": user["_id"]})
+            if boch_user and 'attachedPosition' in boch_user and boch_user['attachedPosition']:
+                user['position'] = boch_user['attachedPosition']
+            else:
+                user['position'] = None
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
