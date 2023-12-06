@@ -11,83 +11,67 @@ async def check(pattern, action):
     if match:
         # * 앞에 있는 문자열 추출
         action_asterisk = match.group(1)
-        # print("매치됨")
     return action_asterisk
+
+
+# AWS 전체 권한 가져오기
+async def get_aws_managed_policies():
+    collection = mongodb.db["awsPolicyAction"]
+    awsPermissionDict = {}
+    result = await collection.find().to_list(None)
+
+    for document in result:
+        Allow = document.get("Allow", [])
+        Deny = document.get("Deny", [])
+        awsPermissionDict[document["_id"]] = {
+            "Allow": set(Allow) if Allow else set(),
+            "Deny": set(Deny) if Deny else set(),
+            "count": document.get("count"),
+        }
+
+    return awsPermissionDict
 
 
 # 정책명으로 개수 가져오기
 async def get_count_policyName(policy_name):
     collection = mongodb.db["awsPolicyAction"]
-    result = await collection.find_one({"_id": policy_name}, {"count": 1})
-    count = result.get("count", 0) if result else 0
+    # AmazonZocaloFullAccess, AmazonZocaloReadOnlyAccess은 정책에 저장되지 않았음.
+    result = await collection.find({"_id": policy_name}, {"count": 1}).to_list(None)
+    # Cursor에서 값을 가져와 반환
+    count = result[0].get("count", 0) if result else 0
 
     return count
 
 
 # 정책 추천하거나 none 반환 - 선택한 권한이 포함된 정책 딕셔너리 전달
 async def recommend_or_none(action_dict):
-    if len(action_dict) == 0:
-        recommend_policy_name = None
-        # 부분 + 부분을 할 방법을 고안해보기
-
-    # 하나의 권한에 선택한 권한이 모두 포함되는 경우
-    else:
-        # 권한 추천 후보 확인
-        print("후보 개수 : ", len(action_dict))
-        # print(action_dict)
-        # 최소 권한 개수에 해당하는 정책 한 개 추천
-        recommend_policy_name = min(action_dict, key=action_dict.get)
-        print("추천 정책명 : ", recommend_policy_name)
-
+    # 최소 권한 개수에 해당하는 정책 한 개 추천
+    recommend_policy_name = min(action_dict, key=action_dict.get, default=None)
     return recommend_policy_name
 
 
 # 넘어오는 권한 목록으로 조합 생성
-async def combination(policy_dict, selected_action_set):
+async def aws_combination(policy_dict, selected_action_set):
     # 조합된 정책의 권한이 합쳐져 저장될 딕셔너리
     contain_combinations_dict = {}
-
-    result = False
 
     # 정책명들이 key에 리스트로 저장됨
     keys = list(policy_dict.keys())
 
-    # 조합 시 nCm이라면 m은 2부터 시작. 전체 조합까지도 갈 수 있음.
-    for m in range(2, len(keys) + 1):
+    # 조합 시 nCm이라면 m은 1부터 시작. 전체 조합까지도 갈 수 있음.
+    for m in range(1, len(keys) + 1):
         for combination in combinations(keys, m):
             combined_set = set()
             for key in combination:
-                combined_set.update(policy_dict[key])
+                combined_set.update(policy_dict[key]["action"])
 
             if selected_action_set.issubset(combined_set):
                 count = 0
                 for key in combination:
-                    count += await get_count_policyName(key)
+                    count += policy_dict[key]["count"]
                 contain_combinations_dict[combination] = count
-        # m 번의 조합으로 선택한 전체 권한이 커버되는 경우 조합 생성 멈추기
-        result = await recommend_or_none(contain_combinations_dict)
-        if result:
-            break
-    # result = recommend_or_none(contain_combinations_dict)
-    return result
-
-
-# 교집합이 선택한 권한에 포함되는지 확인
-async def check_if_subset(intersect_dict, selected_action_set):
-    # 조합된 정책의 권한이 합쳐져 저장될 딕셔너리
-    contain_combinations_dict = {}
-
-    for policy_name, intersect_action in intersect_dict.items():
-        # 선택한 권한이 조합한 권한 세트에 포함되는 경우
-        is_subset = selected_action_set.issubset(intersect_action)
-        if is_subset:
-            # 두 정책의 권한 개수 더해서 {"정책명":개수}의 형태로 딕셔너리에 저장
-            contain_combinations_dict[policy_name] = await get_count_policyName(
-                policy_name
-            )
-
-    result = await recommend_or_none(contain_combinations_dict)
-    return result
+    # 모든 조합 생성하고 반환
+    return contain_combinations_dict
 
 
 # 정책과 선택한 권한의 교집합 찾기
@@ -96,8 +80,6 @@ async def get_intersect_action(policy_dict, selected_action_set):
     intersection_dict = {}
 
     for aws_policy_name, json in policy_dict.items():
-        if "AdministratorAccess" in aws_policy_name:
-            continue
         # 정책에 Deny가 있는 경우
         if "Deny" in json:
             aws_deny_set = set(json["Deny"])
@@ -138,8 +120,6 @@ async def get_intersect_action(policy_dict, selected_action_set):
             asterisk = False
             for action in aws_allow_set:
                 action_asterisk = await check(r"^(.*)(\*+)$", action)
-                # print(type(action_asterisk))
-                # if action_asterisk != "none":
                 # 모든 서비스의 모든 권한인 경우는 제외됨. ""이 전달되기 때문에
                 if action_asterisk != "none":
                     asterisk = True
@@ -154,7 +134,10 @@ async def get_intersect_action(policy_dict, selected_action_set):
                 intersection_set = selected_action_set.intersection(aws_allow_set)
                 if intersection_set:
                     # 교집합을 저장함
-                    intersection_dict[aws_policy_name] = intersection_set
+                    intersection_dict[aws_policy_name] = {
+                        "action": intersection_set,
+                        "count": json["count"],
+                    }
             # 관리형 정책에 *이 포함된 경우
             else:
                 # allow_asterisk_set의 권한이 선택한 권한을 포함하는지 확인 - 문자열 일부에 포함되는 경우 있다고 set에 추가
@@ -165,93 +148,154 @@ async def get_intersect_action(policy_dict, selected_action_set):
 
                 if contain_action_set:
                     # 교집합 저장
-                    intersection_dict[
-                        aws_policy_name
-                    ] = selected_action_set.intersection(contain_action_set)
+                    intersection_dict[aws_policy_name] = {
+                        "action": selected_action_set.intersection(contain_action_set),
+                        "count": json["count"],
+                    }
 
-    # print(intersection_dict)
     return intersection_dict
 
 
-async def get_aws_managed_policies():
-    collection = mongodb.db["awsPolicies"]
-    pipeline = [
-        {
-            "$lookup": {
-                "from": "awsPolicyDocs",  # 조인할 컬렉션 이름
-                "localField": "_id",  # 현재 컬렉션의 필드
-                "foreignField": "_id",  # 조인할 컬렉션의 필드
-                "as": "policy_docs",  # 결과를 저장할 필드 이름
-            }
-        },
-        {"$project": {"_id": 1, "PolicyName": 1, "policy_docs.Document": 1}},
-    ]
-    policies_list = [doc async for doc in collection.aggregate(pipeline)]
-    policy_dict = {}
-    for policy in policies_list:
-        policy_dict[policy["PolicyName"]] = {}
-        policy_statements = policy["policy_docs"][0]["Document"]["Statement"]
+async def aws_min_intersect_permission(intersect_dict):
+    # 교집합한 권한이 같은지 확인
+    # {frozenset({'권한'}): ['정책', ,,]} 형식으로 저장됨
+    policy_with_same_values = {}
 
-        if type(policy_statements) == dict:
-            policy_statements = [policy_statements]
+    for key, value in intersect_dict.items():
+        action_set = frozenset(value["action"])
+        policy_with_same_values.setdefault(action_set, []).append(
+            {"policy": key, "count": value["count"]}
+        )
 
-        # allow_set = set()
-        # deny_set = set()
-        allow_list, deny_list = [], []
+    min_intersection_dict = {}
 
-        for statement in policy_statements:
-            if "Action" in statement:
-                action = statement["Action"]
-                if statement["Effect"] == "Allow":
-                    if type(action) == list:
-                        # action 세트를 추가
-                        allow_list.extend(statement["Action"])
-                    else:
-                        allow_list.extend([statement["Action"]])
-                    policy_dict[policy["PolicyName"]]["Allow"] = allow_list
-                elif statement["Effect"] == "Deny":
-                    if type(action) == list:
-                        deny_list.extend(statement["Action"])
-                    else:
-                        deny_list.extend([statement["Action"]])
-                    policy_dict[policy["PolicyName"]]["Deny"] = deny_list
-            elif "NotAction" in statement:
-                # print(policy['PolicyName'])
-                action = statement["NotAction"]
-                # print(action)
-                if statement["Effect"] == "Allow":
-                    if type(action) == list:
-                        action = set(statement["NotAction"])
-                    else:
-                        action = set([statement["NotAction"]])
-                    policy_dict[policy["PolicyName"]]["Allow"] = action
-                # Deny NotAction이면 허용에 넣어줌
-                elif statement["Effect"] == "Deny":
-                    if type(action) == list:
-                        allow_list.extend(statement["NotAction"])
-                    else:
-                        allow_list.extend([statement["NotAction"]])
-                    policy_dict[policy["PolicyName"]]["Allow"] = allow_list
-        # put_actionlist_DB(client, policy['PolicyName'], allow_list, deny_list)
-    return policy_dict
+    for value_set, roles in policy_with_same_values.items():
+        min_role = min(roles, key=lambda x: (x["count"]))
+
+        min_intersection_dict[min_role["policy"]] = {
+            "action": value_set,
+            "count": min_role["count"],
+        }
+
+    return min_intersection_dict
 
 
 async def find_best_awsPolicy(selected_action_set):
-    intersect_dict = {}
-    aws_policies = await get_aws_managed_policies()
-    # 선택한 권한과 관리형 정책의 교집합 세트
-    intersect_dict = await get_intersect_action(aws_policies, selected_action_set)
-    isContainedOne = await check_if_subset(intersect_dict, selected_action_set)
+    aws_policy_dict = await get_aws_managed_policies()
 
-    # 한 개의 정책에 포함되는 경우
-    if isContainedOne:
-        return isContainedOne
-    # 정책 조합이 필요한 경우
-    else:
-        # 교집합을 조합해서 {('정책명','정책명' -- ) : 개수}를 반환
-        combi_result = await combination(intersect_dict, selected_action_set)
-        if combi_result:
-            return combi_result
-        else:
-            # 뭔가 이상한거
-            print("정책 추천 불가")
+    intersect_dict = await get_intersect_action(aws_policy_dict, selected_action_set)
+    min_intersect_dict = await aws_min_intersect_permission(intersect_dict)
+    combi_result = await aws_combination(min_intersect_dict, selected_action_set)
+    recommend_name = await recommend_or_none(combi_result)
+
+    return list(recommend_name)
+
+
+# gcp 역할 : 권한 목록 딕셔너리 반환
+async def get_gcp_RolePermission():
+    # {”역할명” : [”권한명”,””],~~} 형태로 저장
+    gcpRoleDict = {}
+
+    collection = mongodb.db["gcpRoleDocs"]
+    result = await collection.find(
+        {}, {"_id": 1, "includedPermissions": 1, "permissionCount": 1}
+    ).to_list(None)
+
+    for document in result:
+        permissions = document.get("includedPermissions", [])
+        gcpRoleDict[document["_id"]] = {
+            "permission": set(permissions) if permissions else set(),
+            "count": document.get("permissionCount"),
+        }
+
+    return gcpRoleDict
+
+
+# 교집합 권한 딕셔너리 반환
+async def get_intersect_permission(gcp_permission, selected_permission):
+    intersection_dict = {}
+
+    for role_name, permission_set in gcp_permission.items():
+        intersection_set = selected_permission.intersection(
+            permission_set["permission"]
+        )
+
+        if intersection_set:
+            intersection_dict[role_name] = {
+                "permission": intersection_set,
+                "count": permission_set["count"],
+            }
+
+    return intersection_dict
+
+
+# 중복되는 교집합 권한 세트 있으면 역할명 하나만 남기고 제거
+async def gcp_min_intersect_permission(intersect_dict):
+    # 교집합 권한 세트 딕셔너리
+    role_with_same_values = {}
+
+    for key, value in intersect_dict.items():
+        permission_set = frozenset(value["permission"])
+        role_with_same_values.setdefault(permission_set, []).append(
+            {"role": key, "count": value["count"]}
+        )
+
+    # 교집합 세트가 중복되는 경우 {개수가 가장 작은 역할명 : {교집합 권한, 개수}}의 형태로 딕셔너리에 저장
+    min_intersection_dict = {}
+
+    for value_set, roles in role_with_same_values.items():
+        min_role = min(roles, key=lambda x: (x["count"]))
+
+        min_intersection_dict[min_role["role"]] = {
+            "permission": value_set,
+            "count": min_role["count"],
+        }
+
+    return min_intersection_dict
+
+
+# 모든 조합 생성
+async def gcp_combination(intersect_dict, selected_permission_set):
+    # 조합된 정책의 권한이 합쳐져 저장될 딕셔너리
+    contain_combinations_dict = {}
+
+    # 정책명들이 key에 리스트로 저장됨
+    keys = list(intersect_dict.keys())
+
+    # 조합 시 nCm이라면 전체 조합까지 실행
+    for m in range(1, len(keys) + 1):
+        for combination in combinations(keys, m):
+            combined_set = set()
+            for key in combination:
+                combined_set.update(intersect_dict[key]["permission"])
+
+            if selected_permission_set.issubset(combined_set):
+                count = 0
+                for key in combination:
+                    count += intersect_dict[key]["count"]
+                contain_combinations_dict[combination] = count
+    # {(역할 조합): 개수, ..}의 형식
+    return contain_combinations_dict
+
+
+async def recommend_or_none(contain_dict):
+    recommend_policy_name = min(contain_dict, key=contain_dict.get, default=None)
+    return recommend_policy_name
+
+
+async def find_best_gcpRole(selected_permission_set):
+    # 역할 권한 가져오기
+    gcpRoleDict = await get_gcp_RolePermission()
+
+    # 선택한 권한과 관리형 정책의 교집합 세트
+    intersect_dict = await get_intersect_permission(
+        gcpRoleDict, selected_permission_set
+    )
+    # 교집합 권한 세트가 같은 역할명 중 권한 개수 가장 작은 역할명만 남겨서 딕셔너리에 저장
+    min_intersect_dict = await gcp_min_intersect_permission(intersect_dict)
+    # 조합 생성
+    combi_result = await gcp_combination(min_intersect_dict, selected_permission_set)
+    # 개수가 가장 작은 하나의 조합만 반환
+    recommend_name = await recommend_or_none(combi_result)
+
+    return list(recommend_name)

@@ -139,7 +139,7 @@ async def set_duration_value(duration: int):
     try:
         collection = mongodb.db["loggingDuration"]
         query_result = await collection.update_one(
-            {}, {"$set": {"duration": duration}}, upsert=True
+            {"csp": "aws"}, {"$set": {"duration": duration}}, upsert=True
         )
 
         if query_result.modified_count == 1 or query_result.upserted_id:
@@ -154,10 +154,13 @@ async def set_duration_value(duration: int):
 async def get_duration_value():
     try:
         collection = mongodb.db["loggingDuration"]
-        query_result = await collection.find_one({})
+        query_result = await collection.find_one({"csp": "aws"})
 
         if query_result and "duration" in query_result:
-            return {"duration": query_result["duration"]}
+            duration = query_result["duration"]
+            res_json = bson_to_json({"duration": duration})
+
+            return JSONResponse(content=res_json, status_code=200)
         else:
             raise HTTPException(status_code=404, detail="duration not found")
     except Exception as e:
