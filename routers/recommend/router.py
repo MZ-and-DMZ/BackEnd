@@ -1,10 +1,8 @@
 from fastapi import APIRouter, Body, HTTPException, Path
 from fastapi.responses import JSONResponse
 
-from src.policy_recommend import find_best_awsPolicy, find_best_gcpRole
-from src.utils import bson_to_json
-
 from .schemas import *
+from .service import find_best_awsPolicy, find_best_gcpRole
 
 router = APIRouter(prefix="/recommend", tags=["recommend"])
 
