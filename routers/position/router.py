@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Path
 from fastapi.responses import JSONResponse
 
+from src.aws_policy_control import *
 from src.database import mongodb
 from src.utils import bson_to_json
 
