@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 
 from models import mongodb
 from models.schemas import position, updatePosition
+from src.aws_policy_control import delete_policy
 from src.create_position import create_position_aws
 from src.util import bson_to_json
 
@@ -116,16 +117,44 @@ async def update_position(
 
 @router.delete(path="/delete/{position_name}")
 async def delete_positions(position_name: str = Path(..., title="position name")):
-    collection = mongodb.db["positions"]
-
     try:
-        delete_result = await collection.delete_one({"_id": position_name})  # 삭제
+        position_collection = mongodb.db["positions"]
+        position_data = await position_collection.find_one({"_id": position_name})
+
+        if position_data is None:  # 삭제할 position이 없는 경우 raise
+            raise HTTPException(status_code=404, detail=f"{position_name} not found")
+
+        if position_data["csp"] == "aws":
+            position_link_collection = mongodb.db["positionLink"]
+            position_link_data = await position_link_collection.find_one(
+                {"_id": position_name}
+            )
+            for arn in position_link_data["arns"]:
+                if not "arn:aws:iam::aws:policy/" in arn:
+                    await delete_policy(arn)
+                else:
+                    continue
+            await position_link_collection.delete_one({"_id": position_name})
+
+        elif position_data["csp"] == "gcp":
+            pass
+
+        # 연결된 유저에서 삭제
+
+        delete_result = await position_collection.delete_one(
+            {"_id": position_name}
+        )  # 삭제
+
         if delete_result.deleted_count == 1:
             return {"message": "position delete success"}
         else:
             raise HTTPException(status_code=500, detail="deletion failed")
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        if isinstance(e, HTTPException):
+            raise
+        else:
+            raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get(path="/convert/{position_name}")
