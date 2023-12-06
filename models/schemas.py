@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from pydantic import BaseModel
 
@@ -12,12 +12,12 @@ class position(BaseModel):
     positionName: str
     description: Optional[str]
     csp: str
-    policies: List[dict]
+    policies: List[str]
 
 
 class updatePosition(BaseModel):
     description: str
-    policies: List[dict]
+    policies: List[str]
 
 
 class user(BaseModel):
@@ -54,5 +54,12 @@ class updateGroup(BaseModel):
     attachedPosition: List[str]
 
 
-class recommedParams(BaseModel):
+class recommendParams(BaseModel):
     actions: List[str]
+
+
+class notification(BaseModel):
+    type: str
+    title: str
+    content: str
+    detail: Any

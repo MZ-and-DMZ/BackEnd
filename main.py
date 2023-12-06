@@ -4,7 +4,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from models import mongodb
-from routers import auth, aws, gcp, groups, logging, postitions, users
+from routers import (
+    auth,
+    aws,
+    gcp,
+    groups,
+    logging,
+    notification,
+    postitions,
+    recommend,
+    users,
+)
 from src.config import conf
 
 app = FastAPI()
@@ -13,7 +23,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # 모든 출처 허용
     allow_credentials=True,
-    allow_methods=["*"],  # 모든 HTTP 메서드 허용
+    allow_methods=["*"],
     allow_headers=["*"],  # 모든 헤더 허용
 )
 
@@ -25,6 +35,8 @@ routers = [
     gcp.router,
     groups.router,
     logging.router,
+    recommend.router,
+    notification.router,
 ]
 for router in routers:
     app.include_router(router)
