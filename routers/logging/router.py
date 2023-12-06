@@ -171,7 +171,10 @@ async def get_duration_value():
 async def add_user_exception(user_name: str):
     try:
         collection = mongodb.db["awsLoggingUserException"]
-        query_result = await collection.insert_one({"_id": user_name})
+        current_time = datetime.now()
+        query_result = await collection.insert_one(
+            {"_id": user_name, "updateTime": current_time}
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -188,7 +191,28 @@ async def add_user_exception(user_name: str):
 async def get_user_exception_list():
     try:
         collection = mongodb.db["awsLoggingUserException"]
+        aws_users_collection = mongodb.db["awsUsers"]
+        users_collection = mongodb.db["users"]
         query_result = await collection.find().to_list(length=None)
+
+        for user in query_result:
+            user["updateTime"] = user["updateTime"].strftime("%Y-%m-%d")
+
+            aws_user = await aws_users_collection.find_one({"UserName": user["_id"]})
+            if aws_user and "Groups" in aws_user and aws_user["Groups"]:
+                user["groups"] = aws_user["Groups"]
+            else:
+                user["groups"] = None
+
+            boch_user = await users_collection.find_one({"_id": user["_id"]})
+            if (
+                boch_user
+                and "attachedPosition" in boch_user
+                and boch_user["attachedPosition"]
+            ):
+                user["position"] = boch_user["attachedPosition"]
+            else:
+                user["position"] = None
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -254,49 +278,3 @@ async def get_combined_logging_list():
     res_json = bson_to_json({"logging_list": logging_list})
 
     return JSONResponse(content=res_json, status_code=200)
-
-
-# @router.get(path="/list/all")
-# async def get_combined_logging_list():
-#     try:
-#         match_collection = mongodb.db["awsMatchUserAction"]
-#         action_collection = mongodb.db["awsUserActions"]
-#         pipeline = [
-#             {"$sort": {"updateTime": -1}},
-#             {
-#                 "$project": {
-#                     "user_name": 1,
-#                     "history": {
-#                         "$map": {
-#                             "input": {"$slice": ["$history", 5]},
-#                             "in": {
-#                                 "date": {"$dateToString": {"format": "%Y-%m-%d", "date": "$$this.date"}},
-#                                 "version": "$$this.version",
-#                                 "action": "$$this.action",
-#                                 "action_count": 0,  # 초기값 설정
-#                                 "action_list": [],  # 초기값 설정
-#                             },
-#                         }
-#                     },
-#                 }
-#             },
-#         ]
-
-#         logging_list = []
-#         async for document in match_collection.aggregate(pipeline):
-#             for history_item in document["history"]:
-#                 action_data = await action_collection.find_one({"_id": history_item["action"]})
-#                 if action_data:
-#                     history_item["action_count"] = len(action_data.get("action_list", []))
-#                     history_item["action_list"] = action_data.get("action_list", [])
-#                     if not history_item["action_list"]:
-#                         history_item["action_list"] = None
-#                 del history_item["action"]
-#             logging_list.append(document)
-
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-
-#     res_json = bson_to_json({"logging_list": logging_list})
-
-#     return JSONResponse(content=res_json, status_code=200)
