@@ -33,3 +33,10 @@ async def detach_policy(user_name: str, position_name: str):
     for arn in policy_arns:
         aws_sdk.client.detach_user_policy(UserName=aws_account, PolicyArn=arn)
     aws_sdk.iam_close()
+
+
+async def delete_policy(arn: str):
+    aws_sdk.iam_connect()
+    aws_sdk.client.delete_policy(PolicyArn=arn)
+    aws_sdk.iam_close()
+    return arn
