@@ -102,20 +102,21 @@ async def create_position(position_data: position):
 async def update_position(
     position_data: updatePosition, position_name: str = Path(..., title="position name")
 ):
-    collection = mongodb.db["positions"]
-    new_position_data = position_data.dict()
+    # collection = mongodb.db["positions"]
+    # new_position_data = position_data.dict()
 
-    try:
-        update_result = await collection.update_one(
-            {"_id": position_name}, {"$set": new_position_data}
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    # try:
+    #     update_result = await collection.update_one(
+    #         {"_id": position_name}, {"$set": new_position_data}
+    #     )
+    # except Exception as e:
+    #     raise HTTPException(status_code=500, detail=str(e))
 
-    if update_result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="position not found")
-    else:
-        return {"message": "position update success"}
+    # if update_result.matched_count == 0:
+    #     raise HTTPException(status_code=404, detail="position not found")
+    # else:
+    #     return {"message": "position update success"}
+    return "제작 중"
 
 
 @router.delete(path="/delete/{position_name}")
