@@ -89,7 +89,7 @@ async def create_position(position_data: position):
 
     if insert_result.acknowledged:
         return JSONResponse(
-            content={"message": f"{position_data.positionName} created successfully"},
+            content=insert_data,
             status_code=201,
         )
     else:
@@ -122,7 +122,8 @@ async def delete_positions(position_name: str = Path(..., title="position name")
         position_collection = mongodb.db["positions"]
         position_data = await position_collection.find_one({"_id": position_name})
 
-        if position_data is None:  # 삭제할 position이 없는 경우 raise
+        # 삭제할 position이 없는 경우 raise
+        if position_data is None:
             raise HTTPException(status_code=404, detail=f"{position_name} not found")
 
         if position_data["csp"] == "aws":
@@ -130,13 +131,10 @@ async def delete_positions(position_name: str = Path(..., title="position name")
             position_link_data = await position_link_collection.find_one(
                 {"_id": position_name}
             )
-            for arn in position_link_data["arns"]:
-                if not "arn:aws:iam::aws:policy/" in arn:
-                    await delete_policy(arn)
-                else:
-                    continue
+            # 합쳐놓은 aws 커스텀 정책 삭제
+            await delete_position_link_policy(position_link_data["arns"])
+            # db 데이터 삭제
             await position_link_collection.delete_one({"_id": position_name})
-
         elif position_data["csp"] == "gcp":
             pass
 

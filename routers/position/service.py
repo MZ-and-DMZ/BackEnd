@@ -1,9 +1,11 @@
 import json
 from typing import List
 
+from src.aws_policy_control import delete_policy
 from src.boto3_connect import aws_sdk
 from src.database import mongodb
-from src.utils import *
+
+from .utils import *
 
 
 async def get_policy_docs(arns: List[str]):
@@ -61,3 +63,11 @@ async def create_position_aws(position_name: str, policies: List[dict]):
     collection = mongodb.db["positionLink"]
     schema = {"_id": position_name, "arns": position_arns}
     insert_result = await collection.insert_one(schema)
+
+
+async def delete_position_link_policy(arns: List[str]) -> None:
+    for arn in arns:
+        if not "arn:aws:iam::aws:policy/" in arn:
+            await delete_policy(arn)
+        else:
+            continue
