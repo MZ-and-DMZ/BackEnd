@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from fastapi import APIRouter, HTTPException, Path
 from fastapi.responses import JSONResponse
 
@@ -126,6 +128,7 @@ async def delete_positions(position_name: str = Path(..., title="position name")
         if position_data is None:
             raise HTTPException(status_code=404, detail=f"{position_name} not found")
 
+        # csp별 로직 분리
         if position_data["csp"] == "aws":
             position_link_collection = mongodb.db["positionLink"]
             position_link_data = await position_link_collection.find_one(
@@ -139,6 +142,22 @@ async def delete_positions(position_name: str = Path(..., title="position name")
             pass
 
         # 연결된 유저에서 삭제
+        user_collection = mongodb.db["users"]
+        for user_name in position_data["attachedUser"]:
+            user_positions = await user_collection.find_one(
+                {"_id": user_name}, {"_id": 0, "attachedPosition": 1}
+            )
+            new_user_positions = user_positions["attachedPosition"]
+            new_user_positions.pop(new_user_positions.index(position_name))
+            await user_collection.update_one(
+                {"_id": user_name},
+                {
+                    "$set": {
+                        "attachedPosition": new_user_positions,
+                        "updatetime": datetime.now(),
+                    }
+                },
+            )
 
         delete_result = await position_collection.delete_one(
             {"_id": position_name}
