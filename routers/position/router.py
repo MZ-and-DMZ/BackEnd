@@ -34,7 +34,7 @@ async def list_position():
             for policy in position["policies"]:
                 value = list(policy.values())[0]
                 policy_data = await gcpRoles.find_one({"_id": value})
-                policy["description"] = policy_data.get("Description")
+                policy["description"] = policy_data.get("description")
 
     res_json = {"position_list": bson_to_json(position_list)}
 
