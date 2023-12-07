@@ -52,3 +52,10 @@ async def get_service_list():
     res_json = service_list
 
     return JSONResponse(content=res_json, status_code=200)
+
+
+@router.get(path="/userlist")
+async def get_user_list():
+    collection = mongodb.db["gcpBindings"]
+
+    return await collection.find({}).to_list(None)
