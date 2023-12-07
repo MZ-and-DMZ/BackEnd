@@ -339,11 +339,58 @@ async def delete_gcp_member_exception(member_name: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# @router.get(path="/list/all")
+# async def get_combined_logging_list():
+#     try:
+#         collection = mongodb.db["awsMatchUserAction"]
+#         pipeline = [
+#             {"$unwind": "$history"},
+#             {"$sort": {"history.date": -1, "updateTime": -1}},
+#             {
+#                 "$lookup": {
+#                     "from": "awsUserActions",
+#                     "localField": "history.action",
+#                     "foreignField": "_id",
+#                     "as": "action_data",
+#                 }
+#             },
+#             {"$unwind": {"path": "$action_data", "preserveNullAndEmptyArrays": True}},
+#             {
+#                 "$project": {
+#                     "_id": 0,
+#                     "user_name": "$user_name",
+#                     "date": {
+#                         "$dateToString": {"format": "%Y-%m-%d", "date": "$history.date"}
+#                     },
+#                     "version": "$history.version",
+#                     "action_count": {
+#                         "$size": {"$ifNull": ["$action_data.action_list", []]}
+#                     },
+#                     "action_list": "$action_data.action_list",
+#                 }
+#             },
+#         ]
+
+#         logging_list = await collection.aggregate(pipeline).to_list(None)
+
+#         for item in logging_list:
+#             if not item["action_list"]:
+#                 item["action_list"] = None
+
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+
+#     res_json = bson_to_json({"logging_list": logging_list})
+
+#     return JSONResponse(content=res_json, status_code=200)
+
+
 @router.get(path="/list/all")
 async def get_combined_logging_list():
     try:
-        collection = mongodb.db["awsMatchUserAction"]
-        pipeline = [
+        # AWS data
+        awsCollection = mongodb.db["awsMatchUserAction"]
+        awsPipeline = [
             {"$unwind": "$history"},
             {"$sort": {"history.date": -1, "updateTime": -1}},
             {
@@ -359,6 +406,7 @@ async def get_combined_logging_list():
                 "$project": {
                     "_id": 0,
                     "user_name": "$user_name",
+                    "updateTime": "$updateTime",
                     "date": {
                         "$dateToString": {"format": "%Y-%m-%d", "date": "$history.date"}
                     },
@@ -371,15 +419,61 @@ async def get_combined_logging_list():
             },
         ]
 
-        logging_list = await collection.aggregate(pipeline).to_list(None)
+        awsLoggingList = await awsCollection.aggregate(awsPipeline).to_list(None)
 
-        for item in logging_list:
+        for item in awsLoggingList:
             if not item["action_list"]:
                 item["action_list"] = None
+            item["csp"] = "aws"
+
+        # GCP data
+        gcpCollection = mongodb.db["gcpMatchMemberPermission"]
+        gcpPipeline = [
+            {"$unwind": "$history"},
+            {"$sort": {"history.date": -1, "updateTime": -1}},
+            {
+                "$lookup": {
+                    "from": "gcpMemberPermissions",
+                    "localField": "history.permission",
+                    "foreignField": "_id",
+                    "as": "permission_data",
+                }
+            },
+            {"$unwind": {"path": "$permission_data", "preserveNullAndEmptyArrays": True}},
+            {
+                "$project": {
+                    "_id": 0,
+                    "member_name": "$member_name",
+                    "updateTime": "$updateTime",
+                    "date": {
+                        "$dateToString": {"format": "%Y-%m-%d", "date": "$history.date"}
+                    },
+                    "version": "$history.version",
+                    "permission_count": {
+                        "$size": {"$ifNull": ["$permission_data.permission_list", []]}
+                    },
+                    "permission_list": "$permission_data.permission_list",
+                }
+            },
+        ]
+
+        gcpLoggingList = await gcpCollection.aggregate(gcpPipeline).to_list(None)
+
+        for item in gcpLoggingList:
+            if not item["permission_list"]:
+                item["permission_list"] = None
+            item["csp"] = "gcp"
+
+        # Combine and sort
+        loggingList = awsLoggingList + gcpLoggingList
+        loggingList.sort(key=lambda x: (x["date"], x["updateTime"]), reverse=True)
+
+        for item in loggingList:
+            del item["updateTime"]
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    res_json = bson_to_json({"logging_list": logging_list})
+    res_json = bson_to_json({"logging_list": loggingList})
 
     return JSONResponse(content=res_json, status_code=200)
