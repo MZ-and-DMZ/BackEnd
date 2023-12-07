@@ -134,8 +134,8 @@ async def logging_rollback(version: int, user_name: str = Path(..., title="user 
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post(path="/set/duration")
-async def set_duration_value(duration: int):
+@router.post(path="/set/duration/aws")
+async def set_aws_duration_value(duration: int):
     try:
         collection = mongodb.db["loggingDuration"]
         query_result = await collection.update_one(
@@ -150,8 +150,24 @@ async def set_duration_value(duration: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get(path="/get/duration")
-async def get_duration_value():
+@router.post(path="/set/duration/gcp")
+async def set_gcp_duration_value(duration: int):
+    try:
+        collection = mongodb.db["loggingDuration"]
+        query_result = await collection.update_one(
+            {"csp": "gcp"}, {"$set": {"duration": duration}}, upsert=True
+        )
+
+        if query_result.modified_count == 1 or query_result.upserted_id:
+            return {"message": f"duration set to {duration}"}
+        else:
+            return {"message": "duration not updated"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get(path="/get/duration/aws")
+async def get_aws_duration_value():
     try:
         collection = mongodb.db["loggingDuration"]
         query_result = await collection.find_one({"csp": "aws"})
@@ -167,8 +183,25 @@ async def get_duration_value():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post(path="/add/exception/user")
-async def add_user_exception(user_name: str):
+@router.get(path="/get/duration/gcp")
+async def get_gcp_duration_value():
+    try:
+        collection = mongodb.db["loggingDuration"]
+        query_result = await collection.find_one({"csp": "gcp"})
+
+        if query_result and "duration" in query_result:
+            duration = query_result["duration"]
+            res_json = bson_to_json({"duration": duration})
+
+            return JSONResponse(content=res_json, status_code=200)
+        else:
+            raise HTTPException(status_code=404, detail="duration not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(path="/add/exception/user/aws")
+async def add_aws_user_exception(user_name: str):
     try:
         collection = mongodb.db["awsLoggingUserException"]
         current_time = datetime.now()
@@ -187,8 +220,28 @@ async def add_user_exception(user_name: str):
         raise HTTPException(status_code=500, detail="failed to add")
 
 
-@router.get(path="/list/exception/user")
-async def get_user_exception_list():
+@router.post(path="/add/exception/member/gcp")
+async def add_gcp_member_exception(member_name: str, type: str):
+    try:
+        collection = mongodb.db["gcpLoggingMemberException"]
+        current_time = datetime.now()
+        query_result = await collection.insert_one(
+            {"_id": member_name, "type": type, "updateTime": current_time}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    if query_result.acknowledged:
+        return JSONResponse(
+            content={"message": f"{member_name} added successfully"},
+            status_code=201,
+        )
+    else:
+        raise HTTPException(status_code=500, detail="failed to add")
+
+
+@router.get(path="/list/exception/user/aws")
+async def get_aws_user_exception_list():
     try:
         collection = mongodb.db["awsLoggingUserException"]
         aws_users_collection = mongodb.db["awsUsers"]
@@ -204,7 +257,7 @@ async def get_user_exception_list():
             else:
                 user["groups"] = None
 
-            boch_user = await users_collection.find_one({"_id": user["_id"]})
+            boch_user = await users_collection.find_one({"_id": user["_id"]})  # 이후에 awsAccount로 찾는 것으로 변경하기
             if (
                 boch_user
                 and "attachedPosition" in boch_user
@@ -221,8 +274,47 @@ async def get_user_exception_list():
     return JSONResponse(content=res_json, status_code=200)
 
 
-@router.delete(path="/delete/exception/user")
-async def delete_user_exception(user_name: str):
+@router.get(path="/list/exception/member/gcp")
+async def get_gcp_member_exception_list():
+    try:
+        collection = mongodb.db["gcpLoggingMemberException"]
+        users_collection = mongodb.db["users"]
+        groups_collection = mongodb.db["groups"]
+        query_result = await collection.find().to_list(length=None)
+
+        for member in query_result:
+            member["updateTime"] = member["updateTime"].strftime("%Y-%m-%d")
+
+            if member["type"] == "user":
+                boch_user = await users_collection.find_one({"_id": member["_id"]})  # 이후에 gcpAccount로 찾는 것으로 변경하기
+                if (
+                    boch_user
+                    and "attachedPosition" in boch_user
+                    and boch_user["attachedPosition"]
+                ):
+                    member["position"] = boch_user["attachedPosition"]
+                else:
+                    member["position"] = None
+            elif member["type"] == "group":
+                boch_group = await groups_collection.find_one({"groupName": member["_id"]})  # 이후에 gcpGroup으로 찾는 것으로 변경하기
+                if (
+                    boch_group
+                    and "attachedPosition" in boch_group
+                    and boch_group["attachedPosition"]
+                ):
+                    member["position"] = boch_group["attachedPosition"]
+                else:
+                    member["position"] = None
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    res_json = bson_to_json({"member_exception_list": query_result})
+
+    return JSONResponse(content=res_json, status_code=200)
+
+
+@router.delete(path="/delete/exception/user/aws")
+async def delete_aws_user_exception(user_name: str):
     try:
         collection = mongodb.db["awsLoggingUserException"]
         query_result = await collection.delete_one({"_id": user_name})
@@ -234,11 +326,71 @@ async def delete_user_exception(user_name: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.delete(path="/delete/exception/member/gcp")
+async def delete_gcp_member_exception(member_name: str):
+    try:
+        collection = mongodb.db["gcpLoggingMemberException"]
+        query_result = await collection.delete_one({"_id": member_name})
+        if query_result.deleted_count == 1:
+            return {"message": "member delete success"}
+        else:
+            raise HTTPException(status_code=500, detail="deletion failed")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# @router.get(path="/list/all")
+# async def get_combined_logging_list():
+#     try:
+#         collection = mongodb.db["awsMatchUserAction"]
+#         pipeline = [
+#             {"$unwind": "$history"},
+#             {"$sort": {"history.date": -1, "updateTime": -1}},
+#             {
+#                 "$lookup": {
+#                     "from": "awsUserActions",
+#                     "localField": "history.action",
+#                     "foreignField": "_id",
+#                     "as": "action_data",
+#                 }
+#             },
+#             {"$unwind": {"path": "$action_data", "preserveNullAndEmptyArrays": True}},
+#             {
+#                 "$project": {
+#                     "_id": 0,
+#                     "user_name": "$user_name",
+#                     "date": {
+#                         "$dateToString": {"format": "%Y-%m-%d", "date": "$history.date"}
+#                     },
+#                     "version": "$history.version",
+#                     "action_count": {
+#                         "$size": {"$ifNull": ["$action_data.action_list", []]}
+#                     },
+#                     "action_list": "$action_data.action_list",
+#                 }
+#             },
+#         ]
+
+#         logging_list = await collection.aggregate(pipeline).to_list(None)
+
+#         for item in logging_list:
+#             if not item["action_list"]:
+#                 item["action_list"] = None
+
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+
+#     res_json = bson_to_json({"logging_list": logging_list})
+
+#     return JSONResponse(content=res_json, status_code=200)
+
+
 @router.get(path="/list/all")
 async def get_combined_logging_list():
     try:
-        collection = mongodb.db["awsMatchUserAction"]
-        pipeline = [
+        # AWS data
+        awsCollection = mongodb.db["awsMatchUserAction"]
+        awsPipeline = [
             {"$unwind": "$history"},
             {"$sort": {"history.date": -1, "updateTime": -1}},
             {
@@ -254,6 +406,7 @@ async def get_combined_logging_list():
                 "$project": {
                     "_id": 0,
                     "user_name": "$user_name",
+                    "updateTime": "$updateTime",
                     "date": {
                         "$dateToString": {"format": "%Y-%m-%d", "date": "$history.date"}
                     },
@@ -266,15 +419,61 @@ async def get_combined_logging_list():
             },
         ]
 
-        logging_list = await collection.aggregate(pipeline).to_list(None)
+        awsLoggingList = await awsCollection.aggregate(awsPipeline).to_list(None)
 
-        for item in logging_list:
+        for item in awsLoggingList:
             if not item["action_list"]:
                 item["action_list"] = None
+            item["csp"] = "aws"
+
+        # GCP data
+        gcpCollection = mongodb.db["gcpMatchMemberPermission"]
+        gcpPipeline = [
+            {"$unwind": "$history"},
+            {"$sort": {"history.date": -1, "updateTime": -1}},
+            {
+                "$lookup": {
+                    "from": "gcpMemberPermissions",
+                    "localField": "history.permission",
+                    "foreignField": "_id",
+                    "as": "permission_data",
+                }
+            },
+            {"$unwind": {"path": "$permission_data", "preserveNullAndEmptyArrays": True}},
+            {
+                "$project": {
+                    "_id": 0,
+                    "member_name": "$member_name",
+                    "updateTime": "$updateTime",
+                    "date": {
+                        "$dateToString": {"format": "%Y-%m-%d", "date": "$history.date"}
+                    },
+                    "version": "$history.version",
+                    "permission_count": {
+                        "$size": {"$ifNull": ["$permission_data.permission_list", []]}
+                    },
+                    "permission_list": "$permission_data.permission_list",
+                }
+            },
+        ]
+
+        gcpLoggingList = await gcpCollection.aggregate(gcpPipeline).to_list(None)
+
+        for item in gcpLoggingList:
+            if not item["permission_list"]:
+                item["permission_list"] = None
+            item["csp"] = "gcp"
+
+        # Combine and sort
+        loggingList = awsLoggingList + gcpLoggingList
+        loggingList.sort(key=lambda x: (x["date"], x["updateTime"]), reverse=True)
+
+        for item in loggingList:
+            del item["updateTime"]
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    res_json = bson_to_json({"logging_list": logging_list})
+    res_json = bson_to_json({"logging_list": loggingList})
 
     return JSONResponse(content=res_json, status_code=200)
