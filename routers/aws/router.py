@@ -44,3 +44,10 @@ async def get_service_list():
     services = aws_sdk.session.get_available_services()
 
     return services
+
+
+@router.get(path="/userlist")
+async def get_user_list():
+    collection = mongodb.db["awsUsers"]
+
+    return collection.find({}).to_list()
