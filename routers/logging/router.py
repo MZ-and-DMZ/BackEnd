@@ -135,7 +135,7 @@ async def logging_rollback(version: int, user_name: str = Path(..., title="user 
 
 
 @router.post(path="/set/duration/aws")
-async def set_duration_value(duration: int):
+async def set_aws_duration_value(duration: int):
     try:
         collection = mongodb.db["loggingDuration"]
         query_result = await collection.update_one(
@@ -151,7 +151,7 @@ async def set_duration_value(duration: int):
 
 
 @router.post(path="/set/duration/gcp")
-async def set_duration_value(duration: int):
+async def set_gcp_duration_value(duration: int):
     try:
         collection = mongodb.db["loggingDuration"]
         query_result = await collection.update_one(
@@ -167,7 +167,7 @@ async def set_duration_value(duration: int):
 
 
 @router.get(path="/get/duration/aws")
-async def get_duration_value():
+async def get_aws_duration_value():
     try:
         collection = mongodb.db["loggingDuration"]
         query_result = await collection.find_one({"csp": "aws"})
@@ -184,7 +184,7 @@ async def get_duration_value():
 
 
 @router.get(path="/get/duration/gcp")
-async def get_duration_value():
+async def get_gcp_duration_value():
     try:
         collection = mongodb.db["loggingDuration"]
         query_result = await collection.find_one({"csp": "gcp"})
@@ -200,8 +200,8 @@ async def get_duration_value():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post(path="/add/exception/user")
-async def add_user_exception(user_name: str):
+@router.post(path="/add/exception/user/aws")
+async def add_aws_user_exception(user_name: str):
     try:
         collection = mongodb.db["awsLoggingUserException"]
         current_time = datetime.now()
@@ -220,8 +220,28 @@ async def add_user_exception(user_name: str):
         raise HTTPException(status_code=500, detail="failed to add")
 
 
-@router.get(path="/list/exception/user")
-async def get_user_exception_list():
+@router.post(path="/add/exception/member/gcp")
+async def add_gcp_member_exception(member_name: str, type: str):
+    try:
+        collection = mongodb.db["gcpLoggingMemberException"]
+        current_time = datetime.now()
+        query_result = await collection.insert_one(
+            {"_id": member_name, "type": type, "updateTime": current_time}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    if query_result.acknowledged:
+        return JSONResponse(
+            content={"message": f"{member_name} added successfully"},
+            status_code=201,
+        )
+    else:
+        raise HTTPException(status_code=500, detail="failed to add")
+
+
+@router.get(path="/list/exception/user/aws")
+async def get_aws_user_exception_list():
     try:
         collection = mongodb.db["awsLoggingUserException"]
         aws_users_collection = mongodb.db["awsUsers"]
@@ -237,7 +257,7 @@ async def get_user_exception_list():
             else:
                 user["groups"] = None
 
-            boch_user = await users_collection.find_one({"_id": user["_id"]})
+            boch_user = await users_collection.find_one({"_id": user["_id"]})  # 이후에 awsAccount로 찾는 것으로 변경하기
             if (
                 boch_user
                 and "attachedPosition" in boch_user
@@ -254,13 +274,65 @@ async def get_user_exception_list():
     return JSONResponse(content=res_json, status_code=200)
 
 
-@router.delete(path="/delete/exception/user")
-async def delete_user_exception(user_name: str):
+@router.get(path="/list/exception/member/gcp")
+async def get_gcp_member_exception_list():
+    try:
+        collection = mongodb.db["gcpLoggingMemberException"]
+        users_collection = mongodb.db["users"]
+        groups_collection = mongodb.db["groups"]
+        query_result = await collection.find().to_list(length=None)
+
+        for member in query_result:
+            member["updateTime"] = member["updateTime"].strftime("%Y-%m-%d")
+
+            if member["type"] == "user":
+                boch_user = await users_collection.find_one({"_id": member["_id"]})  # 이후에 gcpAccount로 찾는 것으로 변경하기
+                if (
+                    boch_user
+                    and "attachedPosition" in boch_user
+                    and boch_user["attachedPosition"]
+                ):
+                    member["position"] = boch_user["attachedPosition"]
+                else:
+                    member["position"] = None
+            elif member["type"] == "group":
+                boch_group = await groups_collection.find_one({"groupName": member["_id"]})  # 이후에 gcpGroup으로 찾는 것으로 변경하기
+                if (
+                    boch_group
+                    and "attachedPosition" in boch_group
+                    and boch_group["attachedPosition"]
+                ):
+                    member["position"] = boch_group["attachedPosition"]
+                else:
+                    member["position"] = None
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    res_json = bson_to_json({"member_exception_list": query_result})
+
+    return JSONResponse(content=res_json, status_code=200)
+
+
+@router.delete(path="/delete/exception/user/aws")
+async def delete_aws_user_exception(user_name: str):
     try:
         collection = mongodb.db["awsLoggingUserException"]
         query_result = await collection.delete_one({"_id": user_name})
         if query_result.deleted_count == 1:
             return {"message": "user delete success"}
+        else:
+            raise HTTPException(status_code=500, detail="deletion failed")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete(path="/delete/exception/member/gcp")
+async def delete_gcp_member_exception(member_name: str):
+    try:
+        collection = mongodb.db["gcpLoggingMemberException"]
+        query_result = await collection.delete_one({"_id": member_name})
+        if query_result.deleted_count == 1:
+            return {"message": "member delete success"}
         else:
             raise HTTPException(status_code=500, detail="deletion failed")
     except Exception as e:
