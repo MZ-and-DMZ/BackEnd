@@ -57,5 +57,9 @@ async def get_service_list():
 @router.get(path="/userlist")
 async def get_user_list():
     collection = mongodb.db["gcpBindings"]
+    user_list = await collection.find({}).to_list(None)
+    for user in user_list:
+        user_name, _ = user["_id"].split("@")
+        user["userName"] = user_name
 
-    return await collection.find({}).to_list(None)
+    return user_list
