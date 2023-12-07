@@ -134,7 +134,7 @@ async def logging_rollback(version: int, user_name: str = Path(..., title="user 
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post(path="/set/duration")
+@router.post(path="/set/duration/aws")
 async def set_duration_value(duration: int):
     try:
         collection = mongodb.db["loggingDuration"]
@@ -150,11 +150,44 @@ async def set_duration_value(duration: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get(path="/get/duration")
+@router.post(path="/set/duration/gcp")
+async def set_duration_value(duration: int):
+    try:
+        collection = mongodb.db["loggingDuration"]
+        query_result = await collection.update_one(
+            {"csp": "gcp"}, {"$set": {"duration": duration}}, upsert=True
+        )
+
+        if query_result.modified_count == 1 or query_result.upserted_id:
+            return {"message": f"duration set to {duration}"}
+        else:
+            return {"message": "duration not updated"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get(path="/get/duration/aws")
 async def get_duration_value():
     try:
         collection = mongodb.db["loggingDuration"]
         query_result = await collection.find_one({"csp": "aws"})
+
+        if query_result and "duration" in query_result:
+            duration = query_result["duration"]
+            res_json = bson_to_json({"duration": duration})
+
+            return JSONResponse(content=res_json, status_code=200)
+        else:
+            raise HTTPException(status_code=404, detail="duration not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get(path="/get/duration/gcp")
+async def get_duration_value():
+    try:
+        collection = mongodb.db["loggingDuration"]
+        query_result = await collection.find_one({"csp": "gcp"})
 
         if query_result and "duration" in query_result:
             duration = query_result["duration"]
