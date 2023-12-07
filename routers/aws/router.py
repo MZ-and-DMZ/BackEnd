@@ -50,4 +50,4 @@ async def get_service_list():
 async def get_user_list():
     collection = mongodb.db["awsUsers"]
 
-    return collection.find({}).to_list()
+    return await collection.find({}).to_list(None)
