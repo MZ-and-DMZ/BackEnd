@@ -211,7 +211,6 @@ async def logging_rollback(version: int, csp: str, user_name: str = Path(..., ti
             current_time = datetime.now()
             all_roles = await get_all_roles_for_member(cloudresourcemanager_service, project_id, member)  # 이후에 src 폴더 안으로 이동
 
-            # 해당 버전에 optimization_base가 있는지 없는지 확인
             if 'optimization_base' in selected_record:
                 # 해당 optimization_base의 권한 목록을 가져와 중복 없이 합치기, permission 컬렉션에 저장 (id 저장)
                 selected_optimization_base = selected_record["optimization_base"] - 1
@@ -230,7 +229,6 @@ async def logging_rollback(version: int, csp: str, user_name: str = Path(..., ti
             # 구성원에게 boch_{member} 역할이 붙어있는지 아닌지 확인
             if any('boch_' + user_name in role for role in all_roles):
                 target_role = [f"projects/{project_id}/roles/{role_id}"]
-                # 해당 버전의 권한 목록이 비었는지 아닌지 확인
                 if permissions:
                     # 역할 수정, optimizationVersion 수정(현재 버전)
                     existing_role = await iam_service.projects().roles().get(name=f'projects/{project_id}/roles/{role_id}').execute()
@@ -262,7 +260,6 @@ async def logging_rollback(version: int, csp: str, user_name: str = Path(..., ti
                     )
             else:
                 target_role = []
-                # 해당 버전의 권한 목록이 비었는지 아닌지 확인
                 if permissions:
                     # 역할 생성, optimizationVersion 설정(현재 버전)
                     await create_and_assign_role(iam_service, cloudresourcemanager_service, project_id, member, current_time, permissions)  # 이후에 src 폴더 안으로 이동
@@ -275,7 +272,6 @@ async def logging_rollback(version: int, csp: str, user_name: str = Path(..., ti
                         }
                     )
             
-            # db 갱신
             await gcp_match_collection.update_one(
                 {"member_name": user_name},
                 {
@@ -313,13 +309,29 @@ async def logging_rollback(version: int, member_name: str = Path(..., title="mem
         query_result = await gcp_match_collection.find_one({"member_name": member_name})
         member = query_result["member"]
         selected_record = query_result["history"][version - 1]
+        selected_previous_role = selected_record["previous_role"]
         role_id = 'boch_' + member_name
         current_time = datetime.now()
+        all_roles = await get_all_roles_for_member(cloudresourcemanager_service, project_id, member)  # 이후에 src 폴더 안으로 이동
 
-        # pervious_role에 boch_{member} 역할이 존재하는지 확인 
-            # 존재한다면 : 선택한 버전의 이전 버전의 boch_{member} 역할로 수정
-        # 구성원에게 커스텀 역할이 붙어있는지 확인
-        # 구성원에게 boch_{member} 역할이 붙어있는지 아닌지 확인 (optimizationVersion 값 존재 여부 확인) <- 교차검증 필요
+        # # previous_role에 커스텀 역할이 있는지 확인
+        # for role in selected_previous_role:
+        #     if not role.startswith('roles/'):
+        #         # 최적화로 생성된 역할인지 아닌지 확인
+        #         if 'boch_' + member_name in role:
+        #             # 구성원에게 boch_{member} 역할이 붙어있는지 아닌지 확인
+        #             if any('boch_' + member_name in role for role in all_roles):
+        #                 # 선택한 버전 이전의 boch_{member} 역할로 수정
+        #             else:
+        #                 # 선택한 버전 이전의 boch_{member} 역할 생성 후 붙이기
+        #         else:
+        #             # gcp에 해당 역할이 존재하는지 확인
+        #             # 없다면 db에서 해당 역할 찾아서 역할 만들기
+        
+        # previous_role과 all_roles 비교
+        # previous_role에만 있는 것 (boch_{member} 역할 제외) : 역할 바인딩 추가 (attach_role)
+        # all_roles에만 있는 것 : 역할 바인딩 삭제 (detach_role)
+
         return {"message": "previous version rollback success"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
