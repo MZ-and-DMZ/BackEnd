@@ -2,7 +2,7 @@ import json
 from typing import List
 
 from src.aws_policy_control import delete_policy
-from src.boto3_connect import aws_sdk
+from src.aws_sdk_connect import aws_sdk
 from src.database import mongodb
 
 from .utils import *
