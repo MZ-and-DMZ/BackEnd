@@ -3,14 +3,14 @@ from google.oauth2 import service_account
 from .config import settings
 
 
-# gcp_credentials = service_account.Credentials.from_service_account_info(
-#     settings.get("gcp_credentials"), scopes=["https://www.googleapis.com/auth/cloud-platform"]
-# )
-# gcp_project_id = settings["gcp_credentials"]["project_id"]
-# gcp_organization_id = settings["gcp_organization_id"]
-key_path_file = settings["google_application_credentials"]
-gcp_credentials = service_account.Credentials.from_service_account_file(key_path_file, scopes=["https://www.googleapis.com/auth/cloud-platform"])
-gcp_project_id = settings["project_id"]
+gcp_credentials = service_account.Credentials.from_service_account_info(
+    settings.get("gcp_credentials"), scopes=["https://www.googleapis.com/auth/cloud-platform"]
+)
+gcp_project_id = settings["gcp_credentials"]["project_id"]
+gcp_organization_id = settings["gcp_organization_id"]
+# key_path_file = settings["google_application_credentials"]
+# gcp_credentials = service_account.Credentials.from_service_account_file(key_path_file, scopes=["https://www.googleapis.com/auth/cloud-platform"])
+# gcp_project_id = settings["project_id"]
 
 
 async def get_all_roles_for_member(cloudresourcemanager_service, project_id, member):
@@ -58,7 +58,8 @@ async def add_role_binding(cloudresourcemanager_service, project_id, member, rol
 
 
 async def create_and_assign_role(iam_service, cloudresourcemanager_service, project_id, member, current_time, permissions):
-    member_name = member.split('@')[0].replace(':', '_')
+    member_type, member_email = member.split(':')
+    member_name = member_email.split('@')[0]
     role_id = 'boch_' + member_name
 
     # 역할 생성
@@ -85,3 +86,33 @@ async def create_and_assign_role(iam_service, cloudresourcemanager_service, proj
         body={
             'policy': policy
         }).execute()
+
+
+async def update_optimization_role(iam_service, project_id, member_name, current_time, permissions, role_id):
+    role = iam_service.projects().roles().get(name=f"projects/{project_id}/roles/{role_id}").execute()
+    role["description"] = 'Optimization role for ' + member_name + '(' + current_time.strftime('%Y-%m-%d') + ')'
+    role["includedPermissions"] = permissions
+    iam_service.projects().roles().patch(
+        name=f"projects/{project_id}/roles/{role_id}",
+        body=role
+    ).execute()
+
+
+async def create_customer_role(iam_service, project_id, role_id, history):
+    iam_service.projects().roles().create(
+        parent=f'projects/{project_id}',
+        body={
+            'roleId': role_id,
+            'role': {
+                'title': history["title"],
+                'description': history["description"],
+                'includedPermissions': history["includedPermissions"],
+                'stage': 'GA'
+            }
+        }).execute()
+
+
+async def get_project_role_list(iam_service, project_id):
+    roles_list = iam_service.projects().roles().list(parent=f'projects/{project_id}').execute()
+
+    return roles_list
