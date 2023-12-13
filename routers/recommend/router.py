@@ -14,6 +14,4 @@ async def recommend(
     if csp == "aws":
         return await find_best_awsPolicy(set(actions.actions))
     elif csp == "gcp":
-        role_list = await find_best_gcpRole(set(actions.actions))
-        for role in role_list:
-            role = 
+        return await find_best_gcpRole(set(actions.actions))
