@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException
+from bson import ObjectId
+from fastapi import APIRouter, HTTPException, Path
 from fastapi.responses import JSONResponse
 
 from src.database import mongodb
@@ -73,3 +74,10 @@ async def create_notification(data: notification):
         insert_result = await collection.insert_one(insert_data)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.patch(path="/hide/{id}")
+async def create_notification(id: str = Path(..., title="notification id")):
+    collection = mongodb.db["notification"]
+    await collection.update_one({"_id": ObjectId(id)}, {"$set": {"isShow": False}})
+    return id
