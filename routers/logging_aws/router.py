@@ -8,7 +8,7 @@ from src.boto3_connect import aws_sdk
 from src.database import mongodb
 from src.utils import bson_to_json
 
-from schemas import SwitchState
+from .schemas import SwitchState
 
 router = APIRouter(prefix="/logging/aws", tags=["logging aws"])
 
