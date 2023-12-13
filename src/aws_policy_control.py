@@ -1,6 +1,6 @@
 from src.database import mongodb
 
-from .boto3_connect import aws_sdk
+from .aws_sdk_connect import aws_sdk
 
 
 async def find_aws_account(user_name: str):
