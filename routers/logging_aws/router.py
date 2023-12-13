@@ -20,8 +20,8 @@ async def get_logging_switch():
         query_result = await collection.find_one({"csp": "aws"})
 
         if query_result and "state" in query_result:
-            duration = query_result["state"]
-            res_json = bson_to_json({"state": duration})
+            state = query_result["state"]
+            res_json = bson_to_json({"state": state})
 
             return JSONResponse(content=res_json, status_code=200)
     except Exception as e:
