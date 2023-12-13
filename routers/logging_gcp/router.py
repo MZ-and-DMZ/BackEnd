@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from src.database import mongodb
 from src.utils import bson_to_json
 
-from schemas import SwitchState
+from .schemas import SwitchState
 
 router = APIRouter(prefix="/logging/gcp", tags=["logging gcp"])
 
