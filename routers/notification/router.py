@@ -15,7 +15,28 @@ router = APIRouter(prefix="/notification", tags=["notification"])
 async def list_notification():
     collection = mongodb.db["notification"]
     try:
-        notification_list = await collection.find().to_list(None)
+        notification_list = await collection.find(
+            {"isShow": True}, {"detail": 0, "isShow": 0}
+        ).to_list(None)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    for notification in notification_list:
+        notification["_id"] = str(notification["_id"])
+    res_json = {"notification_list": bson_to_json(notification_list)}
+    collection.update_many(
+        {"isRead": False}, {"$set": {"isRead": True}}
+    )  # api 호출 시 읽었다고 간주
+    return JSONResponse(content=res_json, status_code=200)
+
+
+@router.get(path="/all")
+async def list_notification():
+    collection = mongodb.db["notification"]
+    try:
+        notification_list = await collection.find(
+            {}, {"detail": 0, "isShow": 0}
+        ).to_list(None)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -47,6 +68,7 @@ async def create_notification(data: notification):
     insert_data = data.dict()
     insert_data["createtime"] = datetime.now()
     insert_data["isRead"] = False
+    insert_data["isShow"] = True
     try:
         insert_result = await collection.insert_one(insert_data)
     except Exception as e:
