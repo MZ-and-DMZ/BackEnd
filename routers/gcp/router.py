@@ -13,10 +13,9 @@ async def list_gcp_role():
     try:
         role_list = await collection.find(
             {},
-            {
-                "_id": 0,
-            },
         ).to_list(None)
+        # for role in role_list:
+        #     role["name"] = role.pop("_id")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
