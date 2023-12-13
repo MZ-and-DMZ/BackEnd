@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 
-from src.boto3_connect import aws_sdk
+from src.aws_sdk_connect import aws_sdk
 from src.database import mongodb
 from src.utils import bson_to_json
 
