@@ -297,5 +297,9 @@ async def find_best_gcpRole(selected_permission_set):
     combi_result = await gcp_combination(min_intersect_dict, selected_permission_set)
     # 개수가 가장 작은 하나의 조합만 반환
     recommend_name = await recommend_or_none(combi_result)
-
-    return list(recommend_name)
+    collection = mongodb.db["gcpRoles"]
+    recommend_list = []
+    for name in list(recommend_name):
+        find_result = await collection.find_one({"_id": name}, {"title": 1})
+        recommend_list.append(find_result["title"])
+    return recommend_list
