@@ -9,7 +9,7 @@ from src.database import mongodb
 from src.utils import bson_to_json
 
 from googleapiclient.discovery import build
-from src.gcp_logging_control import gcp_credentials, gcp_project_id, get_all_roles_for_member, remove_role_binding, create_and_assign_role
+from src.gcp_logging_control import gcp_credentials, gcp_project_id, get_all_roles_for_member, remove_role_binding, create_and_assign_role, update_optimization_role
 
 router = APIRouter(prefix="/logging", tags=["logging"])
 
@@ -150,7 +150,7 @@ async def logging_rollback(version: int, csp: str, user_name: str = Path(..., ti
             permissions = selected_permission['permission_list']
             role_id = 'boch_' + user_name
             current_time = datetime.now()
-            all_roles = await get_all_roles_for_member(cloudresourcemanager_service, gcp_project_id, member)  # 이후에 src 폴더 안으로 이동
+            all_roles = await get_all_roles_for_member(cloudresourcemanager_service, gcp_project_id, member)
 
             if 'optimization_base' in selected_record:
                 # 해당 optimization_base의 권한 목록을 가져와 중복 없이 합치기, permission 컬렉션에 저장 (id 저장)
@@ -172,13 +172,7 @@ async def logging_rollback(version: int, csp: str, user_name: str = Path(..., ti
                 target_role = [f"projects/{gcp_project_id}/roles/{role_id}"]
                 if permissions:
                     # 역할 수정, optimizationVersion 수정(현재 버전)
-                    existing_role = await iam_service.projects().roles().get(name=f'projects/{gcp_project_id}/roles/{role_id}').execute()
-                    existing_role['role']['includedPermissions'] = permissions
-                    existing_role['role']['description'] = 'Optimization role for ' + user_name + '(' + current_time.strftime('%Y-%m-%d') + ')'
-                    await iam_service.projects().roles().patch(
-                        name=f'projects/{gcp_project_id}/roles/{role_id}',
-                        body=existing_role
-                    ).execute()
+                    await update_optimization_role(iam_service, gcp_project_id, user_name, current_time, permissions, role_id)
                     await gcp_match_collection.update_one(
                         {"member_name": user_name},
                         {
@@ -189,7 +183,7 @@ async def logging_rollback(version: int, csp: str, user_name: str = Path(..., ti
                     )
                 else:
                     # 역할 바인딩 해제 및 삭제, optimizationVersion 지우기
-                    await remove_role_binding(cloudresourcemanager_service, gcp_project_id, member, f'projects/{gcp_project_id}/roles/{role_id}')  # 이후에 src 폴더 안으로 이동
+                    await remove_role_binding(cloudresourcemanager_service, gcp_project_id, member, f'projects/{gcp_project_id}/roles/{role_id}')
                     await iam_service.projects().roles().delete(name=f'projects/{gcp_project_id}/roles/{role_id}').execute()
                     await gcp_match_collection.update_one(
                         {"member_name": user_name},
@@ -203,7 +197,7 @@ async def logging_rollback(version: int, csp: str, user_name: str = Path(..., ti
                 target_role = []
                 if permissions:
                     # 역할 생성, optimizationVersion 설정(현재 버전)
-                    await create_and_assign_role(iam_service, cloudresourcemanager_service, gcp_project_id, member, current_time, permissions)  # 이후에 src 폴더 안으로 이동
+                    await create_and_assign_role(iam_service, cloudresourcemanager_service, gcp_project_id, member, current_time, permissions)
                     await gcp_match_collection.update_one(
                         {"member_name": user_name},
                         {
