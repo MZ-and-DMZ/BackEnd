@@ -4,7 +4,7 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException, Path
 from fastapi.responses import JSONResponse
 
-from src.boto3_connect import aws_sdk
+from src.aws_sdk_connect import aws_sdk
 from src.database import mongodb
 from src.utils import bson_to_json
 
@@ -188,7 +188,12 @@ async def get_combined_logging_list():
                     "as": "permission_data",
                 }
             },
-            {"$unwind": {"path": "$permission_data", "preserveNullAndEmptyArrays": True}},
+            {
+                "$unwind": {
+                    "path": "$permission_data",
+                    "preserveNullAndEmptyArrays": True,
+                }
+            },
             {
                 "$project": {
                     "_id": 0,

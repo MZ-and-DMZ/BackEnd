@@ -4,7 +4,7 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException, Path
 from fastapi.responses import JSONResponse
 
-from src.boto3_connect import aws_sdk
+from src.aws_sdk_connect import aws_sdk
 from src.database import mongodb
 from src.utils import bson_to_json
 
@@ -81,7 +81,9 @@ async def get_aws_user_exception_list():
             else:
                 user["groups"] = None
 
-            boch_user = await users_collection.find_one({"_id": user["_id"]})  # 이후에 awsAccount로 찾는 것으로 변경하기
+            boch_user = await users_collection.find_one(
+                {"_id": user["_id"]}
+            )  # 이후에 awsAccount로 찾는 것으로 변경하기
             if (
                 boch_user
                 and "attachedPosition" in boch_user
