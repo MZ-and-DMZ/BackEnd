@@ -10,7 +10,7 @@ from src.utils import bson_to_json
 from .schemas import SwitchState
 
 from googleapiclient.discovery import build
-from src.gcp_logging_control import gcp_credentials, gcp_project_id, get_all_roles_for_member, remove_role_binding, add_role_binding, create_and_assign_role
+from src.gcp_logging_control import gcp_credentials, gcp_project_id, get_all_roles_for_member, remove_role_binding, add_role_binding, create_and_assign_role, update_optimization_role, create_customer_role, get_project_role_list
 
 router = APIRouter(prefix="/logging/gcp", tags=["logging gcp"])
 
@@ -168,6 +168,7 @@ async def logging_rollback(version: int, member_name: str = Path(..., title="mem
         selected_last_refresh_time = selected_record["last_refresh_time"]
         selected_previous_role = selected_record["previous_role"]
         selected_date = selected_record["date"]
+        role_id = 'boch_' + member_name
         current_time = datetime.now()
         all_roles = await get_all_roles_for_member(cloudresourcemanager_service, gcp_project_id, member)
 
@@ -199,13 +200,7 @@ async def logging_rollback(version: int, member_name: str = Path(..., title="mem
                     if any('boch_' + member_name in role for role in all_roles):
                         if permissions:
                             # 선택한 버전 이전의 boch_{member} 역할로 수정
-                            existing_role = await iam_service.projects().roles().get(name=role).execute()
-                            existing_role['role']['includedPermissions'] = permissions
-                            existing_role['role']['description'] = 'Optimization role for ' + member_name + '(' + current_time.strftime('%Y-%m-%d') + ')'
-                            await iam_service.projects().roles().patch(
-                                name=role,
-                                body=existing_role
-                            ).execute()
+                            await update_optimization_role(iam_service, gcp_project_id, member_name, current_time, permissions, role_id)
                         else:
                             await remove_role_binding(cloudresourcemanager_service, gcp_project_id, member, role)
                             await iam_service.projects().roles().delete(name=role).execute()
@@ -231,7 +226,7 @@ async def logging_rollback(version: int, member_name: str = Path(..., title="mem
                             )
                 else:
                     # gcp에 해당 역할이 존재하는지 확인
-                    roles_list = await iam_service.projects().roles().list(parent=f'projects/{gcp_project_id}').execute()
+                    roles_list = await get_project_role_list(iam_service, gcp_project_id)
 
                     if not any(role_info['name'] == role for role_info in roles_list.get('roles', [])):
                         # db에서 해당 역할 찾아서 역할 만들기
@@ -243,17 +238,7 @@ async def logging_rollback(version: int, member_name: str = Path(..., title="mem
                             default=None
                         )
                         selected_role_id = role.split("/")[-1]
-                        await iam_service.projects().roles().create(
-                            parent=f'projects/{gcp_project_id}',
-                            body={
-                                'roleId': selected_role_id,
-                                'role': {
-                                    'title': closest_history["title"],
-                                    'description': closest_history["description"],
-                                    'includedPermissions': closest_history["includedPermissions"],
-                                    'stage': 'GA'
-                                }
-                            }).execute()
+                        await create_customer_role(iam_service, gcp_project_id, selected_role_id, closest_history)
                         
                         if role_document['history'][-1]['includedPermissions'] != closest_history['includedPermissions']:
                             await gcp_role_collection.update_one(
