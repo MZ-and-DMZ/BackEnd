@@ -7,7 +7,40 @@ from fastapi.responses import JSONResponse
 from src.database import mongodb
 from src.utils import bson_to_json
 
+from .schemas import SwitchState
+
 router = APIRouter(prefix="/logging/gcp", tags=["logging gcp"])
+
+
+@router.get(path="/get/switch")
+async def get_logging_switch():
+    try:
+        collection = mongodb.db["loggingSwitch"]
+        query_result = await collection.find_one({"csp": "gcp"})
+
+        if query_result and "state" in query_result:
+            state = query_result["state"]
+            res_json = bson_to_json({"state": state})
+
+            return JSONResponse(content=res_json, status_code=200)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put(path="/set/switch")
+async def get_logging_switch(state: SwitchState):
+    try:
+        collection = mongodb.db["loggingSwitch"]
+        query_result = await collection.update_one(
+            {"csp": "gcp"}, {"$set": {"state": state.state}}, upsert=True
+        )
+
+        if query_result.modified_count == 1 or query_result.upserted_id:
+            return {"message": f"logging switch set to {state.state}"}
+        else:
+            return {"message": "failed to update switch state"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post(path="/set/duration")
