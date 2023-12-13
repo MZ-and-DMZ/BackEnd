@@ -3,11 +3,14 @@ from google.oauth2 import service_account
 from .config import settings
 
 
-gcp_credentials = service_account.Credentials.from_service_account_info(
-    settings.get("gcp_credentials"), scopes=["https://www.googleapis.com/auth/cloud-platform"]
-)
-gcp_project_id = settings["gcp_credentials"]["project_id"]
-gcp_organization_id = settings["gcp_organization_id"]
+# gcp_credentials = service_account.Credentials.from_service_account_info(
+#     settings.get("gcp_credentials"), scopes=["https://www.googleapis.com/auth/cloud-platform"]
+# )
+# gcp_project_id = settings["gcp_credentials"]["project_id"]
+# gcp_organization_id = settings["gcp_organization_id"]
+key_path_file = settings["google_application_credentials"]
+gcp_credentials = service_account.Credentials.from_service_account_file(key_path_file, scopes=["https://www.googleapis.com/auth/cloud-platform"])
+gcp_project_id = settings["project_id"]
 
 
 async def get_all_roles_for_member(cloudresourcemanager_service, project_id, member):
