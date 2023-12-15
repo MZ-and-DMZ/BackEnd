@@ -219,7 +219,9 @@ async def get_combined_logging_list():
             item["csp"] = "gcp"
 
         # Combine and sort
-        loggingList = awsLoggingList + gcpLoggingList
+        loggingList = []
+        loggingList.extend(awsLoggingList)
+        loggingList.extend(gcpLoggingList)
         loggingList.sort(key=lambda x: (x["date"], x["updateTime"]), reverse=True)
 
         for item in loggingList:
