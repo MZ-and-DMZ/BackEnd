@@ -16,9 +16,11 @@ router = APIRouter(prefix="/notification", tags=["notification"])
 async def list_notification():
     collection = mongodb.db["notification"]
     try:
-        notification_list = await collection.find(
-            {"isShow": True}, {"isShow": 0}
-        ).to_list(None)
+        notification_list = (
+            await collection.find({"isShow": True}, {"isShow": 0})
+            .sort([("createtime", -1)])
+            .to_list(None)
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
