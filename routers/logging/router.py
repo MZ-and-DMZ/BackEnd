@@ -148,7 +148,7 @@ async def logging_rollback(version: int, csp: str, user_name: str = Path(..., ti
             selected_id = selected_record["permission"]
             selected_permission = await gcp_permission_collection.find_one({"_id": selected_id})
             permissions = selected_permission['permission_list']
-            role_id = 'boch_' + user_name
+            role_id = 'boch_' + user_name + '_1'
             current_time = datetime.now()
             all_roles = await get_all_roles_for_member(cloudresourcemanager_service, gcp_project_id, member)
 

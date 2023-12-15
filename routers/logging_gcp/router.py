@@ -168,7 +168,7 @@ async def logging_rollback(version: int, member_name: str = Path(..., title="mem
         selected_last_refresh_time = selected_record["last_refresh_time"]
         selected_previous_role = selected_record["previous_role"]
         selected_date = selected_record["date"]
-        role_id = 'boch_' + member_name
+        role_id = 'boch_' + member_name + '_1'
         current_time = datetime.now()
         all_roles = await get_all_roles_for_member(cloudresourcemanager_service, gcp_project_id, member)
 
