@@ -148,7 +148,7 @@ async def logging_rollback(version: int, csp: str, user_name: str = Path(..., ti
             selected_id = selected_record["permission"]
             selected_permission = await gcp_permission_collection.find_one({"_id": selected_id})
             permissions = selected_permission['permission_list']
-            role_id = 'boch_' + user_name + '_1'
+            role_id = 'boch.' + user_name
             current_time = datetime.now()
             all_roles = await get_all_roles_for_member(cloudresourcemanager_service, gcp_project_id, member)
 
@@ -168,7 +168,7 @@ async def logging_rollback(version: int, csp: str, user_name: str = Path(..., ti
                 selected_id = permission_query_result.inserted_id
 
             # 구성원에게 boch_{member} 역할이 붙어있는지 아닌지 확인
-            if any('boch_' + user_name in role for role in all_roles):
+            if any('boch.' + user_name in role for role in all_roles):
                 target_role = [f"projects/{gcp_project_id}/roles/{role_id}"]
                 if permissions:
                     # 역할 수정, optimizationVersion 수정(현재 버전)

@@ -168,7 +168,7 @@ async def logging_rollback(version: int, member_name: str = Path(..., title="mem
         selected_last_refresh_time = selected_record["last_refresh_time"]
         selected_previous_role = selected_record["previous_role"]
         selected_date = selected_record["date"]
-        role_id = 'boch_' + member_name + '_1'
+        role_id = 'boch.' + member_name
         current_time = datetime.now()
         all_roles = await get_all_roles_for_member(cloudresourcemanager_service, gcp_project_id, member)
 
@@ -176,7 +176,7 @@ async def logging_rollback(version: int, member_name: str = Path(..., title="mem
         for role in selected_previous_role:
             if not role.startswith('roles/'):
                 # 최적화로 생성된 역할인지 아닌지 확인
-                if 'boch_' + member_name in role:
+                if 'boch.' + member_name in role:
                     previous_record = query_result["history"][version - 2]
                     previous_id = previous_record["permission"]
                     previous_permission = await gcp_permission_collection.find_one({"_id": previous_id})
@@ -197,7 +197,7 @@ async def logging_rollback(version: int, member_name: str = Path(..., title="mem
                         previous_id = permission_query_result.inserted_id
                     
                     # 구성원에게 boch_{member} 역할이 붙어있는지 아닌지 확인
-                    if any('boch_' + member_name in role for role in all_roles):
+                    if any('boch.' + member_name in role for role in all_roles):
                         if permissions:
                             # 선택한 버전 이전의 boch_{member} 역할로 수정
                             await update_optimization_role(iam_service, gcp_project_id, member_name, current_time, permissions, role_id)
@@ -253,7 +253,7 @@ async def logging_rollback(version: int, member_name: str = Path(..., title="mem
                                 }}
                             )
         
-        attach_roles = [role for role in selected_previous_role if role not in all_roles and 'boch_' + member_name not in role]
+        attach_roles = [role for role in selected_previous_role if role not in all_roles and 'boch.' + member_name not in role]
         detach_roles = [role for role in all_roles if role not in selected_previous_role]
 
         for role in attach_roles:

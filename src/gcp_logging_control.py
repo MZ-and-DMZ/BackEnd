@@ -60,7 +60,7 @@ async def add_role_binding(cloudresourcemanager_service, project_id, member, rol
 async def create_and_assign_role(iam_service, cloudresourcemanager_service, project_id, member, current_time, permissions):
     member_type, member_email = member.split(':')
     member_name = member_email.split('@')[0]
-    role_id = 'boch_' + member_name + '_1'
+    role_id = 'boch.' + member_name
 
     # 역할 생성
     iam_service.projects().roles().create(
