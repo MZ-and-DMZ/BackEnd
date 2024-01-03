@@ -5,4 +5,4 @@
 2. 작업 후 Pull request 생성
 3. Github action 확인하고 merge
 
-test
+cd test
