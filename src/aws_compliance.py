@@ -13,8 +13,8 @@ async def check_root_key_from_credential_report():
     반환 : root 계정의 액세스키 사용 여부 확인 boolean
     """
     aws_sdk.iam_connect()
-    response = aws_sdk.client.generate_credential_report()
-    response = aws_sdk.client.get_credential_report()
+    response = await aws_sdk.client.generate_credential_report()
+    response = await aws_sdk.client.get_credential_report()
 
     result = False
 
@@ -49,7 +49,7 @@ async def get_account_id():
     반환 : 계정 번호(12자리 정수)
     """
     sts_client = boto3.client('sts')
-    response = sts_client.get_caller_identity()
+    response = await sts_client.get_caller_identity()
     account_id = response['Account']
 
     return account_id
@@ -65,7 +65,7 @@ async def check_root_account_usage(account_id):
 
     try:
         # AWS 계정 정보 조회
-        response = client.describe_account(AccountId=account_id)
+        response = await client.describe_account(AccountId=account_id)
         account_status = response['Account']['Status']
         pprint.pprint(response)
 
@@ -87,13 +87,13 @@ async def get_all_users_keys() -> list:
     반환 : { "user" : username, "keys" : [ user_key1, ... ] }를 요소로 갖는 배열
     """
     iam = boto3.client("iam")
-    users = iam.list_users()
+    users = await iam.list_users()
     all_user_key = []
 
     for user in users["Users"]:
         username = user["UserName"]
         user_key = []
-        access_keys = iam.list_access_keys(UserName=username)["AccessKeyMetadata"]
+        access_keys = await iam.list_access_keys(UserName=username)["AccessKeyMetadata"]
         for access_key_metadata in access_keys :
             user_key.append(access_key_metadata["AccessKeyId"])
         user_key = { "user" : username, "keys" : user_key }
@@ -110,7 +110,7 @@ async def check_last_used_date_access_key(access_key) -> int :
     """
     iam_client = boto3.client("iam")
     access_key_id = access_key 
-    last_used_date = iam_client.get_access_key_last_used(AccessKeyId=access_key_id)
+    last_used_date = await iam_client.get_access_key_last_used(AccessKeyId=access_key_id)
     try : 
         last_used_date = last_used_date['AccessKeyLastUsed']['LastUsedDate']
         korea_tz = pytz.timezone("Asia/Seoul")
@@ -133,13 +133,13 @@ async def check_user_access_key_date() -> list :
     key : 액세스 키
     diff_day : 오늘 날짜 - 마지막 사용날짜
     """
-    all_user_key = get_all_users_keys()
+    all_user_key = await get_all_users_keys()
     all_user_key_diff = []
 
     for user_key in all_user_key :
         user = user_key["user"]
         for key in user_key["keys"] :
-            diff_day = check_last_used_date_access_key(key)
+            diff_day = await check_last_used_date_access_key(key)
             user_key_diff = {"user" : user, "key" : key, "diff_day" : diff_day}
             all_user_key_diff.append(user_key_diff)
 
@@ -152,7 +152,7 @@ async def find_expired_access_key(duration) -> list :
     """
     반환 : 만료된 키에 대한 정보({user : 사용자명, key: 키명, diff : 차이점})
     """
-    user_key_diffs = check_user_access_key_date()
+    user_key_diffs = await check_user_access_key_date()
     expired_keys = []
     for user_key_diff in user_key_diffs :
         if user_key_diff["diff"] >= duration :
@@ -168,7 +168,7 @@ async def create_new_access_key(username) -> dict :
     반환 : 신규 생성한 액세스 키 관련 데이터
     """
     iam = boto3.client("iam")
-    new_access_key = iam.create_access_key(UserName=username)['AccessKey']['AccessKeyId']
+    new_access_key = await iam.create_access_key(UserName=username)['AccessKey']['AccessKeyId']
     return new_access_key
 
 
@@ -180,7 +180,7 @@ async def delete_access_key(access_key_id) -> bool:
     """
     iam = boto3.client("iam")
     try : 
-        iam.delete_access_key(access_key_id=access_key_id)
+        await iam.delete_access_key(access_key_id=access_key_id)
         return True
     except :
         return False
@@ -188,10 +188,10 @@ async def delete_access_key(access_key_id) -> bool:
 
 # (종합) 만료된 액세스 키 확인, 삭제, 신규 생성
 async def update_access_key(duration) :
-    expired_keys = find_expired_access_key(duration=duration)
+    expired_keys = await find_expired_access_key(duration=duration)
     for expired_key in expired_keys :
-        if delete_access_key(expired_key["key"]) :
-            new_access_key = create_new_access_key(expired_key["user"])
+        if await delete_access_key(expired_key["key"]) :
+            new_access_key = await create_new_access_key(expired_key["user"])
         else :
             print("Something goes wrong...")
 
@@ -203,7 +203,7 @@ async def password_policy(length=8, MaxAge=90) :
     그냥 다 True, 최소 8글자 이상, 90일 이상 사용 불가 
     """
     iam = boto3.client("iam")
-    response = iam.update_account_password_policy(
+    response = await iam.update_account_password_policy(
         MinimumPasswordLength=8,
         RequireSymbols=True,
         RequireNumbers=True,
