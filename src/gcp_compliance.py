@@ -42,7 +42,7 @@ async def save_admin_activity_to_mongodb(log_list, result):
         }
         data['detail'].append(detail_info)
 
-    query_result = collection.insert_one(data)
+    query_result = await collection.insert_one(data)
 
     return str(query_result.inserted_id)
 
@@ -59,7 +59,7 @@ async def get_admin_account_logs(credentials, project_id, admin_email, days_thre
 
     resource_name = f"projects/{project_id}"
     # resource_name = f"organizations/[organization_id]"
-    logs = client.list_entries(filter_=filter_str, resource_names=[resource_name])
+    logs = await client.list_entries(filter_=filter_str, resource_names=[resource_name])
     log_list = []
 
     for log in logs:
@@ -68,16 +68,16 @@ async def get_admin_account_logs(credentials, project_id, admin_email, days_thre
     if len(log_list) > 0:
         inserted_id = await save_admin_activity_to_mongodb(log_list, False)
 
-        return True, log_list, inserted_id
+        return False, inserted_id
     else:
         inserted_id = await save_admin_activity_to_mongodb(log_list, True)
 
-        return False, log_list, inserted_id
+        return True, inserted_id
     
 
 async def save_mongodb_to_csv(insert_id):
     collection = mongodb.db["gcpCompliance"]
-    document = collection.find_one({'_id': ObjectId(insert_id)})
+    document = await collection.find_one({'_id': ObjectId(insert_id)})
     current_date = datetime.now().strftime('%Y%m%d')
 
     # CSV 파일에 데이터 저장
@@ -108,7 +108,7 @@ async def get_organization_project_ID(credentials):
 
     # 조직 정보 가져오기
     request = service.organizations().search(body={})
-    response = request.execute()
+    response = await request.execute()
 
     for organization in response.get('organizations', []):
         organization_data = {
@@ -116,11 +116,11 @@ async def get_organization_project_ID(credentials):
             'organization_name': organization['displayName'],
             'organization_id': organization['name'].split('/')[-1]
         }
-        collection.insert_one(organization_data)
+        await collection.insert_one(organization_data)
 
         # 해당 조직에 속한 프로젝트 정보 가져오기
         project_request = service.projects().list(filter=f"parent.id:{organization['name'].split('/')[-1]} parent.type:organization")
-        project_response = project_request.execute()
+        project_response = await project_request.execute()
 
         for project in project_response.get('projects', []):
             project_data = {
@@ -128,7 +128,7 @@ async def get_organization_project_ID(credentials):
                 'project_name': project['name'],
                 'project_id': project['projectId']
             }
-            collection.insert_one(project_data)
+            await collection.insert_one(project_data)
 
 
 async def get_unused_service_account(project_id, days_threshold):
@@ -138,7 +138,7 @@ async def get_unused_service_account(project_id, days_threshold):
     filter_str = f'timestamp >= "{start_time.isoformat()}" AND protoPayload.authenticationInfo.principalEmail:*@{project_id}.iam.gserviceaccount.com'
 
     # 필터를 사용하여 로그 항목 가져오기
-    entries = list(client.list_entries(filter_=filter_str))
+    entries = list(await client.list_entries(filter_=filter_str))
 
     # 사용된 서비스 계정 모으기
     used_service_accounts = set()
@@ -147,26 +147,28 @@ async def get_unused_service_account(project_id, days_threshold):
         used_service_accounts.add(entry.to_api_repr()['protoPayload']['authenticationInfo']['principalEmail'])
 
     # 모든 서비스 계정 가져오기
-    service_accounts = list(client.iam('v1').projects().serviceAccounts().list(name='projects/' + project_id).execute()['accounts'])
+    service_accounts = list((await client.iam('v1').projects().serviceAccounts().list(name='projects/' + project_id).execute())['accounts'])
 
     # 사용하지 않은 서비스 계정 찾기
     unused_service_accounts = [account['email'] for account in service_accounts if account['email'] not in used_service_accounts]
 
-    result = {
+    result = len(unused_service_accounts) == 0
+
+    data = {
         "type": "unused_service_account",
         "date": datetime.now(),
-        "result": len(unused_service_accounts) == 0,
+        "result": result,
         "detail": unused_service_accounts
     }
 
-    query_result = collection.insert_one(result)
+    query_result = await collection.insert_one(data)
 
-    return str(query_result.inserted_id)
+    return result, str(query_result.inserted_id)
 
 
 async def disable_unused_service_accounts(credentials, project_id, inserted_id):
     collection = mongodb.db["gcpCompliance"]
-    result = collection.find_one({'_id': inserted_id})
+    result = await collection.find_one({'_id': inserted_id})
 
     if result is not None:
         unused_service_accounts = result['detail']
@@ -174,14 +176,14 @@ async def disable_unused_service_accounts(credentials, project_id, inserted_id):
         # 사용하지 않은 서비스 계정 비활성화
         for account_email in unused_service_accounts:
             service = build('iam', 'v1', credentials=credentials)
-            service.projects().serviceAccounts().disable(
+            await service.projects().serviceAccounts().disable(
                 name=f'projects/{project_id}/serviceAccounts/{account_email}',
             ).execute()
 
 
 async def delete_unused_service_accounts(credentials, project_id, inserted_id):
     collection = mongodb.db["gcpCompliance"]
-    result = collection.find_one({'_id': inserted_id})
+    result = await collection.find_one({'_id': inserted_id})
 
     if result is not None:
         unused_service_accounts = result['detail']
@@ -189,14 +191,14 @@ async def delete_unused_service_accounts(credentials, project_id, inserted_id):
         # 사용하지 않은 서비스 계정 삭제
         for account_email in unused_service_accounts:
             service = build('iam', 'v1', credentials=credentials)
-            service.projects().serviceAccounts().delete(
+            await service.projects().serviceAccounts().delete(
                 name=f'projects/{project_id}/serviceAccounts/{account_email}',
             ).execute()
 
 
 async def disable_unused_service_account_keys(credentials, project_id, inserted_id):
     collection = mongodb.db["gcpCompliance"]
-    result = collection.find_one({'_id': inserted_id})
+    result = await collection.find_one({'_id': inserted_id})
 
     if result is not None:
         unused_service_accounts = result['detail']
@@ -204,19 +206,19 @@ async def disable_unused_service_account_keys(credentials, project_id, inserted_
         # 사용하지 않은 서비스 계정의 키 비활성화
         for account_email in unused_service_accounts:
             service = build('iam', 'v1', credentials=credentials)
-            keys = service.projects().serviceAccounts().keys().list(
+            keys = await service.projects().serviceAccounts().keys().list(
                 name=f'projects/{project_id}/serviceAccounts/{account_email}'
             ).execute()
 
             for key in keys['keys']:
-                service.projects().serviceAccounts().keys().disable(
+                await service.projects().serviceAccounts().keys().disable(
                     name=key['name']
                 ).execute()
 
 
 async def delete_unused_service_account_keys(credentials, project_id, inserted_id):
     collection = mongodb.db["gcpCompliance"]
-    result = collection.find_one({'_id': inserted_id})
+    result = await collection.find_one({'_id': inserted_id})
 
     if result is not None:
         unused_service_accounts = result['detail']
@@ -224,12 +226,12 @@ async def delete_unused_service_account_keys(credentials, project_id, inserted_i
         # 사용하지 않은 서비스 계정의 키 삭제
         for account_email in unused_service_accounts:
             service = build('iam', 'v1', credentials=credentials)
-            keys = service.projects().serviceAccounts().keys().list(
+            keys = await service.projects().serviceAccounts().keys().list(
                 name=f'projects/{project_id}/serviceAccounts/{account_email}'
             ).execute()
 
             for key in keys['keys']:
-                service.projects().serviceAccounts().keys().delete(
+                await service.projects().serviceAccounts().keys().delete(
                     name=key['name']
                 ).execute()
 
@@ -237,7 +239,7 @@ async def delete_unused_service_account_keys(credentials, project_id, inserted_i
 async def list_keys_without_expiration(credentials, project_id):
     collection = mongodb.db["gcpCompliance"]
     service = build('iam', 'v1', credentials=credentials)
-    accounts = service.projects().serviceAccounts().list(
+    accounts = await service.projects().serviceAccounts().list(
         name=f'projects/{project_id}'
     ).execute()
 
@@ -245,7 +247,7 @@ async def list_keys_without_expiration(credentials, project_id):
 
     # 모든 서비스 계정을 검사
     for account in accounts['accounts']:
-        keys = service.projects().serviceAccounts().keys().list(
+        keys = await service.projects().serviceAccounts().keys().list(
             name=account['name']
         ).execute()
 
@@ -258,21 +260,23 @@ async def list_keys_without_expiration(credentials, project_id):
                     'key': key['name']
                 })
 
+    result = len(keys_without_expiration) == 0
+
     data = {
         'type': 'keys_without_expiration',
         'date': datetime.now(),
-        'result': len(keys_without_expiration) == 0,
+        'result': result,
         'detail': keys_without_expiration
     }
 
-    query_result = collection.insert_one(data)
+    query_result = await collection.insert_one(data)
 
-    return str(query_result.inserted_id)
+    return result, str(query_result.inserted_id)
 
 
-async def disable_keys_without_expiration(credentials, mongodb, inserted_id):
+async def disable_keys_without_expiration(credentials, inserted_id):
     collection = mongodb.db["gcpCompliance"]
-    document = collection.find_one({'_id': inserted_id})
+    document = await collection.find_one({'_id': inserted_id})
     
     # 문서의 'detail' 필드에서 유효 기간이 설정되지 않은 서비스 계정 키의 목록을 가져옴
     keys_without_expiration = document['detail']
@@ -281,22 +285,106 @@ async def disable_keys_without_expiration(credentials, mongodb, inserted_id):
     
     # 각 키를 비활성화
     for key in keys_without_expiration:
-        service.projects().serviceAccounts().keys().disable(
+        await service.projects().serviceAccounts().keys().disable(
             name=key['key']
         ).execute()
 
 
-async def delete_keys_without_expiration(credentials, mongodb, inserted_id):
+async def delete_keys_without_expiration(credentials, inserted_id):
     collection = mongodb.db["gcpCompliance"]
-    document = collection.find_one({'_id': inserted_id})
+    document = await collection.find_one({'_id': inserted_id})
     
     # 문서의 'detail' 필드에서 유효 기간이 설정되지 않은 서비스 계정 키의 목록을 가져옴
     keys_without_expiration = document['detail']
     
     service = build('iam', 'v1', credentials=credentials)
     
-    # 각 키를 비활성화
+    # 각 키를 삭제
     for key in keys_without_expiration:
-        service.projects().serviceAccounts().keys().delete(
+        await service.projects().serviceAccounts().keys().delete(
             name=key['key']
         ).execute()
+
+
+async def check_key_rotation(credentials, project_id, days_threshold):
+    collection = mongodb.db["gcpCompliance"]
+    service = build('iam', 'v1', credentials=credentials)
+    service_accounts = await service.projects().serviceAccounts().list(
+        name=f'projects/{project_id}'
+    ).execute()
+
+    old_keys = []
+
+    for account in service_accounts['accounts']:
+        keys = await service.projects().serviceAccounts().keys().list(
+            name=account['name']
+        ).execute()
+
+        for key in keys['keys']:
+            # Convert string to datetime
+            key_created_at = parse(key['validAfterTime'])
+
+            # Calculate the age of the key
+            key_age = datetime.now(timezone.utc) - key_created_at
+
+            # If the key is older than the threshold, delete it
+            if key_age > timedelta(days=days_threshold):
+                old_keys.append({'account': account['email'], 'key': key['name']})
+    
+    result = not bool(old_keys)
+
+    query_result = await collection.insert_one({
+        'type': 'check_key_rotation',
+        'date': datetime.now(),
+        'result': result,
+        'detail': old_keys
+    })
+
+    return result, str(query_result.inserted_id)
+
+
+async def renew_old_keys(credentials, inserted_id):
+    collection = mongodb.db["gcpCompliance"]
+    document = await collection.find_one({'_id': inserted_id})
+
+    # 'detail' 필드에서 기간이 지난 서비스 계정 키의 목록을 가져옴
+    old_keys = document['detail']
+
+    service = build('iam', 'v1', credentials=credentials)
+
+    # 각 키를 갱신
+    for key in old_keys:
+        account_email = key['account']
+        # 새 키 생성
+        await service.projects().serviceAccounts().keys().create(
+            name=f'projects/-/serviceAccounts/{account_email}',
+            body={}
+        ).execute()
+
+
+async def count_admins(credentials, project_id):
+    collection = mongodb.db["gcpCompliance"]
+    service = build('cloudresourcemanager', 'v1', credentials=credentials)
+    policy = await service.projects().getIamPolicy(
+        resource=project_id,
+        body={}
+    ).execute()
+
+    admins = []
+    for binding in policy['bindings']:
+        # 관리자 권한을 가진 구성원들만 골라냄
+        if 'roles/owner' in binding['role']:
+            for member in binding['members']:
+                admins.append(member)
+    
+    result = len(admins) < 2
+
+    query_result = await collection.insert_one({
+        'type': 'count_admins',
+        'project': project_id,
+        'date': datetime.now(),
+        'result': result,
+        'detail': admins
+    })
+
+    return result, str(query_result.inserted_id)
