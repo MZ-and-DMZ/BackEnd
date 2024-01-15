@@ -43,6 +43,38 @@ async def get_user(user_name: str = Path(..., title="user name")):
         raise HTTPException(status_code=404, detail="user not found")
 
     result["userName"] = result.pop("_id")
+    aws_users = mongodb.db["awsUsers"]
+    aws_user_find_result = await aws_users.find_one({"UserName": result["awsAccount"]})
+
+    result["awsAccount"] = {
+        "id": aws_user_find_result["UserName"],
+        "lastLoginTime": aws_user_find_result.get("PasswordLastUsed"),
+        "isMfaEnabled": aws_user_find_result.get("isMfaEnabled"),
+        "managedKeys": [
+            {
+                "keyId": "6e67b820-d00e-4607-a16c-b340cfe23c76",
+                "createDate": {"$date": "2024-01-02T11:25:36.570Z"},
+                "keyExpirationDate": {"$date": "2024-02-01T11:25:36.570Z"},
+            },
+            {
+                "keyId": "6e67b820-d00e-4607-a16c-b340cfe23c76",
+                "createDate": {"$date": "2024-01-02T11:25:36.570Z"},
+                "keyExpirationDate": {"$date": "2024-02-01T11:25:36.570Z"},
+            },
+        ],
+        "usedKeys": [
+            {
+                "keyId": "6e67b820-d00e-4607-a16c-b340cfe23c76",
+                "createDate": {"$date": "2024-01-02T11:25:36.570Z"},
+                "keyExpirationDate": {"$date": "2024-02-01T11:25:36.570Z"},
+            },
+            {
+                "keyId": "6e67b820-d00e-4607-a16c-b340cfe23c76",
+                "createDate": {"$date": "2024-01-02T11:25:36.570Z"},
+                "keyExpirationDate": {"$date": "2024-02-01T11:25:36.570Z"},
+            },
+        ],
+    }
 
     res_json = bson_to_json(result)
 
@@ -55,6 +87,10 @@ async def create_user(user_data: user):
     insert_data = user_data.dict()
     insert_data["_id"] = insert_data.pop("userName")
     insert_data["updatetime"] = datetime.now()
+    insert_data["isMfaEnabled"] = False
+    insert_data["isRetire"] = False
+    insert_data["lastLoginTime"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    insert_data["isImportantPerson"] = False
     try:
         insert_result = await collection.insert_one(insert_data)
     except Exception as e:
@@ -137,3 +173,23 @@ async def delete_user(user_name: str = Path(..., title="user name")):
             raise HTTPException(status_code=500, detail="deletion failed")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.patch(path="/retire/{user_name}")
+async def retire_user(user_name: str = Path(..., title="user name")):
+    collection = mongodb.db["users"]
+    try:
+        update_result = await collection.update_one(
+            {"_id": user_name}, {"$set": {"isRetire": True}}
+        )
+        # JIRA 알림 보내기
+        return {"message": "user retire success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(path="/request-mfa/{user_name}")
+async def request_mfa_user(user_name: str = Path(..., title="user name")):
+    # 함수 들어가야함
+
+    return {"message": "mfa request success"}
