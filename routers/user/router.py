@@ -18,7 +18,7 @@ async def list_user():
     collection = mongodb.db["users"]
 
     try:
-        user_list = await collection.find().to_list(None)
+        user_list = await collection.find({"isRetire": False}).to_list(None)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
