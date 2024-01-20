@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Path
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 
 from src.database import mongodb
