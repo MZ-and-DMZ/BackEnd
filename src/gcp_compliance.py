@@ -1,7 +1,7 @@
 from googleapiclient import discovery
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
-from google.cloud import logging
+from google.cloud import logging_v2
 from datetime import datetime, timedelta, timezone
 from dateutil.parser import parse
 from typing import List
@@ -9,8 +9,10 @@ from typing import List
 from bson import ObjectId
 from .config import settings
 from src.database import mongodb
+from collections import OrderedDict
 
 import csv
+import json
 
 
 gcp_credentials = service_account.Credentials.from_service_account_info(
@@ -48,7 +50,7 @@ async def save_admin_activity_to_mongodb(log_list, result):
 
 
 async def get_admin_account_logs(credentials, project_id, admin_email, days_threshold):
-    client = logging.Client(credentials=credentials)
+    client = logging_v2.Client(credentials=credentials)
     duration = timedelta(days=days_threshold)
     timestamp = (datetime.now() - duration).replace(microsecond=0).isoformat()
 
@@ -59,7 +61,7 @@ async def get_admin_account_logs(credentials, project_id, admin_email, days_thre
 
     resource_name = f"projects/{project_id}"
     # resource_name = f"organizations/[organization_id]"
-    logs = await client.list_entries(filter_=filter_str, resource_names=[resource_name])
+    logs = client.list_entries(filter_=filter_str, resource_names=[resource_name])
     log_list = []
 
     for log in logs:
@@ -131,23 +133,43 @@ async def get_organization_project_ID(credentials):
             await collection.insert_one(project_data)
 
 
-async def get_unused_service_account(project_id, days_threshold):
-    collection = mongodb.db["gcpCompliance"]
-    client = logging.Client(project=project_id)
-    start_time = datetime.now() - timedelta(days=days_threshold)
-    filter_str = f'timestamp >= "{start_time.isoformat()}" AND protoPayload.authenticationInfo.principalEmail:*@{project_id}.iam.gserviceaccount.com'
+def extract_principal_email(entry):
+    # entry가 ProtobufEntry이고 payload의 value가 OrderedDict인 경우
+    if entry and entry.payload  and isinstance(entry.payload, OrderedDict):
+        try:
+            # OrderedDict에서 principalEmail 추출
+            principal_email = entry.payload.get('authenticationInfo', {}).get('principalEmail')
+            return principal_email
+        except Exception as e:
+            print(f"Error extracting principalEmail: {e}")
+    return None
 
-    # 필터를 사용하여 로그 항목 가져오기
-    entries = list(await client.list_entries(filter_=filter_str))
+
+async def get_unused_service_account(credentials, project_id, days_threshold):
+    collection = mongodb.db["gcpCompliance"]
+    client = logging_v2.Client(credentials=credentials)
+    iam_client = build('iam', 'v1', credentials=credentials)
+    duration = timedelta(days=days_threshold)
+    timestamp = (datetime.now() - duration).replace(microsecond=0).isoformat()
+    filter_str = (
+        f'timestamp >= "{timestamp}" '
+        f'AND protoPayload.authenticationInfo.principalEmail:@{project_id}.iam.gserviceaccount.com'
+    )
 
     # 사용된 서비스 계정 모으기
     used_service_accounts = set()
 
-    for entry in entries:
-        used_service_accounts.add(entry.to_api_repr()['protoPayload']['authenticationInfo']['principalEmail'])
+    # 필터를 사용하여 로그 항목 가져오기
+    resource_name = f"projects/{project_id}"
+    # resource_name = f"organizations/[organization_id]"
+    logs = client.list_entries(filter_=filter_str, resource_names=[resource_name])
+
+    for log in logs:
+        principal_email = extract_principal_email(log)
+        used_service_accounts.add(principal_email)
 
     # 모든 서비스 계정 가져오기
-    service_accounts = list((await client.iam('v1').projects().serviceAccounts().list(name='projects/' + project_id).execute())['accounts'])
+    service_accounts = list(iam_client.projects().serviceAccounts().list(name='projects/' + project_id).execute()['accounts'])
 
     # 사용하지 않은 서비스 계정 찾기
     unused_service_accounts = [account['email'] for account in service_accounts if account['email'] not in used_service_accounts]
