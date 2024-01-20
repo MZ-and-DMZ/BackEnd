@@ -1,13 +1,25 @@
-import json
-from datetime import datetime
-
 from fastapi import APIRouter, HTTPException, Path
 from fastapi.responses import JSONResponse
 
+from src.database import mongodb
 from src.utils import bson_to_json
 import src.aws_compliance as aws_compliance
 
 router = APIRouter(prefix="/compliance/aws", tags=["compliance aws"])
+
+
+@router.get(path="/check/list")
+async def aws_check_list():
+    collection = mongodb.db["awsComplianceList"]
+    try:
+        check_list = await collection.find({}).to_list(None)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    res_json = {"aws_check_list": bson_to_json(check_list)}
+
+    return JSONResponse(content=res_json, status_code=200)
+
 
 @router.get(path="/check/root/access/key/active")
 async def check_root_key_from_credential_report():
