@@ -1,4 +1,3 @@
-from googleapiclient import discovery
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
 from google.cloud import logging_v2
