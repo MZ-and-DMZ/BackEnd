@@ -10,7 +10,7 @@ router = APIRouter(prefix="/compliance/gcp", tags=["compliance gcp"])
 
 
 @router.get(path="/check/list")
-async def aws_check_list():
+async def gcp_check_list():
     collection = mongodb.db["gcpComplianceList"]
     try:
         check_list = await collection.find({}).to_list(None)
