@@ -6,3 +6,4 @@ boto3
 motor
 dynaconf
 pandas
+google-api-python-client
