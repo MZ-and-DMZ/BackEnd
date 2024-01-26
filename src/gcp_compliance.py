@@ -25,7 +25,7 @@ async def save_admin_activity_to_mongodb(log_list, result):
     collection = mongodb.db["gcpCompliance"]
     current_time = datetime.now().replace(microsecond=0).isoformat()
     data = {
-        'type': 'admin_account_usage',
+        'type': '관리자 계정 사용 여부 확인',
         'date': current_time,
         'result': result,
         'detail': []
@@ -176,8 +176,8 @@ async def get_unused_service_account(credentials, project_id, days_threshold):
     result = len(unused_service_accounts) == 0
 
     data = {
-        "type": "unused_service_account",
-        "date": datetime.now(),
+        "type": "서비스 계정 이용 현황 관리",
+        "date": datetime.now().replace(microsecond=0).isoformat(),
         "result": result,
         "detail": unused_service_accounts
     }
@@ -285,7 +285,7 @@ async def list_keys_without_expiration(credentials, project_id):
 
     data = {
         'type': 'keys_without_expiration',
-        'date': datetime.now(),
+        'date': datetime.now().replace(microsecond=0).isoformat(),
         'result': result,
         'detail': keys_without_expiration
     }
@@ -355,8 +355,8 @@ async def check_key_rotation(credentials, project_id, days_threshold):
     result = not bool(old_keys)
 
     query_result = await collection.insert_one({
-        'type': 'check_key_rotation',
-        'date': datetime.now(),
+        'type': '서비스 계정 키 주기적 변경',
+        'date': datetime.now().replace(microsecond=0).isoformat(),
         'result': result,
         'detail': old_keys
     })
@@ -401,9 +401,9 @@ async def count_admins(credentials, project_id):
     result = len(admins) < 2
 
     query_result = await collection.insert_one({
-        'type': 'count_admins',
+        'type': '관리자 권한을 보유한 계정 관리',
         'project': project_id,
-        'date': datetime.now(),
+        'date': datetime.now().replace(microsecond=0).isoformat(),
         'result': result,
         'detail': admins
     })

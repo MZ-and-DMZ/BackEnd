@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
+from datetime import datetime
 
 from src.database import mongodb
 from src.utils import bson_to_json
@@ -9,17 +10,49 @@ import src.gcp_compliance as gcp_compliance
 router = APIRouter(prefix="/compliance/gcp", tags=["compliance gcp"])
 
 
+# @router.get(path="/check/list")
+# async def gcp_check_list():
+#     collection = mongodb.db["gcpComplianceList"]
+#     try:
+#         check_list = await collection.find({}).to_list(None)
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+
+#     res_json = {"gcp_check_list": bson_to_json(check_list)}
+
+#     return JSONResponse(content=res_json, status_code=200)
+
+
 @router.get(path="/check/list")
 async def gcp_check_list():
-    collection = mongodb.db["gcpComplianceList"]
+    collection_gcp_compliance_list = mongodb.db["gcpComplianceList"]
+    collection_gcp_compliance = mongodb.db["gcpCompliance"]
+
     try:
-        check_list = await collection.find({}).to_list(None)
+        # Get all documents from gcpComplianceList collection
+        gcp_compliance_list = await collection_gcp_compliance_list.find({}).to_list(None)
+
+        # Iterate through each document in gcpComplianceList
+        for doc in gcp_compliance_list:
+            type_value = doc["_id"]
+            
+            # Find the latest date from gcpCompliance for the current type
+            latest_data = await collection_gcp_compliance.find_one(
+                {"type": type_value},
+                sort=[("date", -1)]
+            )
+
+            # Add the date to the document if latest_data exists
+            if latest_data:
+                doc["date"] = latest_data["date"]
+
+        # Construct the response JSON
+        res_json = {"gcp_compliance_list": bson_to_json(gcp_compliance_list)}
+
+        return JSONResponse(content=res_json, status_code=200)
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-    res_json = {"gcp_check_list": bson_to_json(check_list)}
-
-    return JSONResponse(content=res_json, status_code=200)
 
 
 @router.get(path="/get/admin/account/logs")
