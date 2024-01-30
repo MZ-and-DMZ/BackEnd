@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from src.aws_policy_control import attach_policy, detach_policy
 from src.database import mongodb
 from src.utils import bson_to_json
+from src.mfa_request import send_slack_message
 
 from .schemas import *
 
@@ -190,6 +191,10 @@ async def retire_user(user_name: str = Path(..., title="user name")):
 
 @router.post(path="/request-mfa/{user_name}")
 async def request_mfa_user(user_name: str = Path(..., title="user name")):
-    # 함수 들어가야함
-
-    return {"message": "mfa request success"}
+    try:
+        title = f"To. {user_name}님"
+        message = "AWS MFA가 설정되지 않았습니다. AWS MFA를 설정하세요."
+        await send_slack_message(title, message)
+        return {"message": "mfa request success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
