@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from src.aws_sdk_connect import aws_sdk
 from src.database import mongodb
 from src.utils import bson_to_json
+from src.aws_user_control import create_user
 
 router = APIRouter(prefix="/aws", tags=["aws"])
 
@@ -51,3 +52,12 @@ async def get_user_list():
     collection = mongodb.db["awsUsers"]
 
     return await collection.find({}).to_list(None)
+
+
+@router.post(path="/user")
+async def create_aws_user(user_name: str):
+    try:
+        await create_user(user_name=user_name)
+        return {"message": "user create success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
