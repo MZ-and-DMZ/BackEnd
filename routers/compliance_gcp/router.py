@@ -80,10 +80,11 @@ async def save_mongodb_to_csv(insert_id: str):
 @router.get(path="/get/unused/service/account")
 async def get_unused_service_account(days_threshold: int):
     try:
-        result, inserted_id = await gcp_compliance.get_unused_service_account(gcp_credentials, gcp_project_id, days_threshold)
+        # result, inserted_id = await gcp_compliance.get_unused_service_account(gcp_credentials, gcp_project_id, days_threshold)
+        result = await gcp_compliance.get_inactive_service_accounts(gcp_project_id, gcp_credentials, 30)
         res_json = bson_to_json({
             "result": result,
-            "inserted_id": inserted_id
+            #"inserted_id": inserted_id
         })
         return JSONResponse(content=res_json, status_code=200)
     except Exception as e:

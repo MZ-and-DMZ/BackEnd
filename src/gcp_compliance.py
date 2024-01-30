@@ -1,6 +1,7 @@
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
 from google.cloud import logging_v2
+from googleapiclient.errors import HttpError
 from datetime import datetime, timedelta, timezone
 from dateutil.parser import parse
 from typing import List
@@ -12,6 +13,7 @@ from collections import OrderedDict
 
 import csv
 import json
+import requests
 
 
 gcp_credentials = service_account.Credentials.from_service_account_info(
@@ -409,3 +411,111 @@ async def count_admins(credentials, project_id):
     })
 
     return result, str(query_result.inserted_id)
+
+
+# 특정 프로젝트의 서비스 계정 목록 추출
+async def list_service_accounts(project_id, credentials):
+    iam_client = build('iam', 'v1', credentials=credentials)
+    name = f"projects/{project_id}"
+    request = iam_client.projects().serviceAccounts().list(name=name)
+    service_accounts = []
+
+    while True:
+        response = request.execute()
+
+        for service_account in response.get('accounts', []):
+            service_accounts.append(service_account)
+
+        request = iam_client.projects().serviceAccounts().list_next(previous_request=request, previous_response=response)
+        if request is None:
+            break
+    
+    return service_accounts
+
+
+# 특정 프로젝트의 서비스 계정이 소유한 서비스 계정 키 목록 추출 
+async def list_service_account_keys(project_id, service_account_email, credentials):
+    iam_client = build('iam', 'v1', credentials=credentials)
+    name = f"projects/{project_id}/serviceAccounts/{service_account_email}"
+
+    try:
+        request = iam_client.projects().serviceAccounts().keys().list(name=name)
+        response = request.execute()
+        keys = response.get('keys', [])
+        return keys
+    except HttpError as e:
+        print(f"An error occurred: {e}")
+        return None
+
+
+# async def get_last_activity_time(service_account_name, service_account_email, credentials):
+#     project_id = service_account_name.split('/')[1]
+#     location = 'global'
+#     # activity_type = 'serviceAccountKeyLastAuthentication  # 서비스 계정 키의 최근 사용 나열
+#     activity_type = 'serviceAccountLastAuthentication'  # 서비스 계정의 최근 사용 나열
+
+#     parent = f'projects/{project_id}/locations/{location}/activityTypes/{activity_type}'
+#     filter_str = f'activities.fullResourceName="{service_account_name}"'
+
+#     service = build('policyanalyzer', 'v1', credentials=credentials)
+#     request = service.projects().locations().activityTypes().activities().query(
+#         parent=parent,
+#         filter=filter_str
+#     )
+
+#     url = f"https://policyanalyzer.googleapis.com/v1/projects/{project_id}/locations/global/activityTypes/serviceAccountLastAuthentication/activities:query"
+#     # filter_str = f'activities.full_resource_name%3D%22%2F%2Fiam.googleapis.com%2Fprojects%2F{project_id}%2FserviceAccounts%2F{service_account_email}%22'
+
+#     # HTTP GET 요청을 보냅니다.
+#     # response = requests.get(url, headers={"Authorization": f"Bearer {credentials.token}"}, params={"filter": filter_str})
+
+#     response = requests.get(url, headers={"Authorization": f"Bearer {credentials.token}"})
+
+#     if response.status_code == 200:
+#         return response.json()
+#     else:
+#         print(f"Error: {response.status_code}")
+#         print(f"Error message: {response.json().get('error', {}).get('message')}")
+#         return None
+
+#     # response = request.execute()
+#     activities = response.get('activities', [])
+
+#     if activities:
+#         try:
+#             latest_activity = max(activities, key=lambda x: x['observationPeriod']['startTime'])
+#             start_time_str = latest_activity['observationPeriod']['startTime']
+#             last_authenticated_time_str = latest_activity['activity']['serviceAccount']['lastAuthenticatedTime']
+            
+#             start_time = datetime.strptime(start_time_str, "%Y-%m-%dT%H:%M:%S.%fZ")
+#             last_authenticated_time = datetime.strptime(last_authenticated_time_str, "%Y-%m-%dT%H:%M:%S.%fZ")
+
+#             return last_authenticated_time
+#         except (KeyError, ValueError) as e:
+#             print(f"Error parsing last activity time: {e}")
+#             return None
+#     else:
+#         return None
+
+
+async def get_inactive_service_accounts(project_id, credentials, inactive_days=30):
+    service_accounts = await list_service_accounts(project_id, credentials)
+    print(service_accounts)
+    inactive_service_accounts = []
+
+    for service_account in service_accounts:
+        service_account_name = service_account['name']
+        service_account_email = service_account['email']
+        print(service_account_email)
+        last_activity_time = await get_last_activity_time(service_account_name, service_account_email, credentials)
+        print(last_activity_time)
+
+        if last_activity_time:
+            time_difference = datetime.utcnow() - last_activity_time 
+            
+            if time_difference.days > inactive_days:
+                inactive_service_accounts.append(service_account_name)
+        else:
+            inactive_service_accounts.append(service_account_name)
+
+    return inactive_service_accounts
