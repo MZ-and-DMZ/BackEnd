@@ -448,54 +448,55 @@ async def list_service_account_keys(project_id, service_account_email, credentia
         return None
 
 
-# async def get_last_activity_time(service_account_name, service_account_email, credentials):
-#     project_id = service_account_name.split('/')[1]
-#     location = 'global'
-#     # activity_type = 'serviceAccountKeyLastAuthentication  # 서비스 계정 키의 최근 사용 나열
-#     activity_type = 'serviceAccountLastAuthentication'  # 서비스 계정의 최근 사용 나열
+async def get_last_activity_time(service_account_name, service_account_email, credentials):
+    project_id = service_account_name.split('/')[1]
+    location = 'global'
+    # activity_type = 'serviceAccountKeyLastAuthentication  # 서비스 계정 키의 최근 사용 나열
+    activity_type = 'serviceAccountLastAuthentication'  # 서비스 계정의 최근 사용 나열
 
-#     parent = f'projects/{project_id}/locations/{location}/activityTypes/{activity_type}'
-#     filter_str = f'activities.fullResourceName="{service_account_name}"'
+    parent = f'projects/{project_id}/locations/{location}/activityTypes/{activity_type}'
+    # filter_str = f'activities.fullResourceName="{service_account_name}"'
 
-#     service = build('policyanalyzer', 'v1', credentials=credentials)
-#     request = service.projects().locations().activityTypes().activities().query(
-#         parent=parent,
-#         filter=filter_str
-#     )
+    service = build('policyanalyzer', 'v1', credentials=credentials)
+    request = service.projects().locations().activityTypes().activities().query(
+        parent=parent
+        #, filter=filter_str
+    )
 
-#     url = f"https://policyanalyzer.googleapis.com/v1/projects/{project_id}/locations/global/activityTypes/serviceAccountLastAuthentication/activities:query"
-#     # filter_str = f'activities.full_resource_name%3D%22%2F%2Fiam.googleapis.com%2Fprojects%2F{project_id}%2FserviceAccounts%2F{service_account_email}%22'
+    # url = f"https://policyanalyzer.googleapis.com/v1/projects/{project_id}/locations/global/activityTypes/serviceAccountLastAuthentication/activities:query"
+    # # filter_str = f'activities.full_resource_name%3D%22%2F%2Fiam.googleapis.com%2Fprojects%2F{project_id}%2FserviceAccounts%2F{service_account_email}%22'
 
-#     # HTTP GET 요청을 보냅니다.
-#     # response = requests.get(url, headers={"Authorization": f"Bearer {credentials.token}"}, params={"filter": filter_str})
+    # # HTTP GET 요청을 보냅니다.
+    # # response = requests.get(url, headers={"Authorization": f"Bearer {credentials.token}"}, params={"filter": filter_str})
 
-#     response = requests.get(url, headers={"Authorization": f"Bearer {credentials.token}"})
+    # response = requests.get(url, headers={"Authorization": f"Bearer {credentials.token}"})
 
-#     if response.status_code == 200:
-#         return response.json()
-#     else:
-#         print(f"Error: {response.status_code}")
-#         print(f"Error message: {response.json().get('error', {}).get('message')}")
-#         return None
+    # if response.status_code == 200:
+    #     return response.json()
+    # else:
+    #     print(f"Error: {response.status_code}")
+    #     print(f"Error message: {response.json().get('error', {}).get('message')}")
+    #     return None
 
-#     # response = request.execute()
-#     activities = response.get('activities', [])
+    response = request.execute()
+    print(response)
+    activities = response.get('activities', [])
 
-#     if activities:
-#         try:
-#             latest_activity = max(activities, key=lambda x: x['observationPeriod']['startTime'])
-#             start_time_str = latest_activity['observationPeriod']['startTime']
-#             last_authenticated_time_str = latest_activity['activity']['serviceAccount']['lastAuthenticatedTime']
+    if activities:
+        try:
+            latest_activity = max(activities, key=lambda x: x['observationPeriod']['startTime'])
+            start_time_str = latest_activity['observationPeriod']['startTime']
+            last_authenticated_time_str = latest_activity['activity']['serviceAccount']['lastAuthenticatedTime']
             
-#             start_time = datetime.strptime(start_time_str, "%Y-%m-%dT%H:%M:%S.%fZ")
-#             last_authenticated_time = datetime.strptime(last_authenticated_time_str, "%Y-%m-%dT%H:%M:%S.%fZ")
+            start_time = datetime.strptime(start_time_str, "%Y-%m-%dT%H:%M:%S.%fZ")
+            last_authenticated_time = datetime.strptime(last_authenticated_time_str, "%Y-%m-%dT%H:%M:%S.%fZ")
 
-#             return last_authenticated_time
-#         except (KeyError, ValueError) as e:
-#             print(f"Error parsing last activity time: {e}")
-#             return None
-#     else:
-#         return None
+            return last_authenticated_time
+        except (KeyError, ValueError) as e:
+            print(f"Error parsing last activity time: {e}")
+            return None
+    else:
+        return None
 
 
 async def get_inactive_service_accounts(project_id, credentials, inactive_days=30):
