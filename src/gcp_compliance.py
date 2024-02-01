@@ -463,21 +463,6 @@ async def get_last_activity_time(service_account_name, service_account_email, cr
         #, filter=filter_str
     )
 
-    # url = f"https://policyanalyzer.googleapis.com/v1/projects/{project_id}/locations/global/activityTypes/serviceAccountLastAuthentication/activities:query"
-    # # filter_str = f'activities.full_resource_name%3D%22%2F%2Fiam.googleapis.com%2Fprojects%2F{project_id}%2FserviceAccounts%2F{service_account_email}%22'
-
-    # # HTTP GET 요청을 보냅니다.
-    # # response = requests.get(url, headers={"Authorization": f"Bearer {credentials.token}"}, params={"filter": filter_str})
-
-    # response = requests.get(url, headers={"Authorization": f"Bearer {credentials.token}"})
-
-    # if response.status_code == 200:
-    #     return response.json()
-    # else:
-    #     print(f"Error: {response.status_code}")
-    #     print(f"Error message: {response.json().get('error', {}).get('message')}")
-    #     return None
-
     response = request.execute()
     print(response)
     activities = response.get('activities', [])
