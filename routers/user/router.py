@@ -17,6 +17,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 @router.get(path="/list")
 async def list_user():
     collection = mongodb.db["users"]
+    aws_users_collection = mongodb.db["awsUsers"]
 
     try:
         user_list = await collection.find({"isRetire": False}).to_list(None)
@@ -24,6 +25,8 @@ async def list_user():
         raise HTTPException(status_code=500, detail=str(e))
 
     for user in user_list:
+        aws_data = await aws_users_collection.find_one({"UserName": user["awsAccount"]})
+        user["awsAccount"] = aws_data
         user["userName"] = user.pop("_id")
 
     res_json = {"user_list": bson_to_json(user_list)}
