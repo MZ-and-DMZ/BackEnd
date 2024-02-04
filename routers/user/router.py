@@ -49,36 +49,6 @@ async def get_user(user_name: str = Path(..., title="user name")):
     aws_users = mongodb.db["awsUsers"]
     aws_user_find_result = await aws_users.find_one({"UserName": result["awsAccount"]})
 
-    result["awsAccount"] = {
-        "id": aws_user_find_result["UserName"],
-        "lastLoginTime": aws_user_find_result.get("PasswordLastUsed"),
-        "isMfaEnabled": aws_user_find_result.get("isMfaEnabled"),
-        "managedKeys": [
-            {
-                "keyId": "6e67b820-d00e-4607-a16c-b340cfe23c76",
-                "createDate": {"$date": "2024-01-02T11:25:36.570Z"},
-                "keyExpirationDate": {"$date": "2024-02-01T11:25:36.570Z"},
-            },
-            {
-                "keyId": "6e67b820-d00e-4607-a16c-b340cfe23c76",
-                "createDate": {"$date": "2024-01-02T11:25:36.570Z"},
-                "keyExpirationDate": {"$date": "2024-02-01T11:25:36.570Z"},
-            },
-        ],
-        "usedKeys": [
-            {
-                "keyId": "6e67b820-d00e-4607-a16c-b340cfe23c76",
-                "createDate": {"$date": "2024-01-02T11:25:36.570Z"},
-                "keyExpirationDate": {"$date": "2024-02-01T11:25:36.570Z"},
-            },
-            {
-                "keyId": "6e67b820-d00e-4607-a16c-b340cfe23c76",
-                "createDate": {"$date": "2024-01-02T11:25:36.570Z"},
-                "keyExpirationDate": {"$date": "2024-02-01T11:25:36.570Z"},
-            },
-        ],
-    }
-
     res_json = bson_to_json(result)
 
     return JSONResponse(content=res_json, status_code=200)
