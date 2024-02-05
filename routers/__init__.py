@@ -1,4 +1,5 @@
 from .aws.router import router as aws_router
+from .compliance_ad.router import router as compliance_ad
 from .compliance_aws.router import router as compliance_aws
 from .compliance_gcp.router import router as compliance_gcp
 from .gcp.router import router as gcp_router
@@ -14,6 +15,7 @@ from .user.router import router as user_router
 routers = [
     aws_router,
     gcp_router,
+    compliance_ad,
     compliance_aws,
     compliance_gcp,
     group_router,
