@@ -8,7 +8,7 @@ router = APIRouter(prefix="/compliance/ad", tags=["compliance ad"])
 
 
 @router.get(path="/check/list")
-async def aws_check_list():
+async def ad_check_list():
     collection = mongodb.db["adCompliance"]
     try:
         check_list = await collection.find({}).to_list(None)
