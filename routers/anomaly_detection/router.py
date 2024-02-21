@@ -147,7 +147,8 @@ async def alert_list():
                         "eventname": "$eventname",
                         "eventsource": "$eventsource",
                         "time_detection": "$time_detection",
-                        "ip_detection": "$ip_detection"
+                        "ip_detection": "$ip_detection",
+                        "csp": "$csp"
                     },
                     "count": {"$sum": 1},  # 그룹 내의 문서 수 계산
                     "latest_time": {"$max": "$eventtime"},
@@ -167,8 +168,26 @@ async def alert_list():
                     "useridentity_username": "$_id.useridentity_username",
                     "eventname": "$_id.eventname",
                     "eventsource": "$_id.eventsource",
-                    "time_detection": "$_id.time_detection",
-                    "ip_detection": "$_id.ip_detection",
+                    "detection": {
+                        "$cond": {
+                            "if": {"$and": [{"$eq": ["$_id.time_detection", 1]}, {"$eq": ["$_id.ip_detection", 1]}]},
+                            "then": ["Time", "IP"],
+                            "else": {
+                                "$cond": {
+                                    "if": {"$eq": ["$_id.time_detection", 1]},
+                                    "then": "Time",
+                                    "else": {
+                                        "$cond": {
+                                            "if": {"$eq": ["$_id.ip_detection", 1]},
+                                            "then": "IP",
+                                            "else": "Unknown"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "csp": "$_id.csp",
                     "count": 1,
                     "latest_time": 1,
                     "unique_awsregion":  {"$setUnion": ["$unique_awsregion", []]},
