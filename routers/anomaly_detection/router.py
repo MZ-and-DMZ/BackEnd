@@ -114,3 +114,75 @@ async def delete_time(ip: str):
             raise HTTPException(status_code=500, detail="deletion failed")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+@router.get(path="/alertlist")
+async def alert_list():
+    collection = mongodb.db["anomalyDetectionLog"]
+    try:
+        pipeline = [
+            {
+                "$match": {
+                    "$or": [
+                        {"time_detection": 1},  # time_detection이 1인 문서 필터링
+                        {"ip_detection": 1}  # ip_detection이 1인 문서 필터링
+                    ]
+                }
+            },
+            {
+                "$addFields": {
+                    "hourly_eventtime": {
+                        "$dateToString": {
+                            "format": "%Y-%m-%d %H:00:00",  # 1시간 단위로 포맷 지정
+                            "date": {"$dateFromString": {"dateString": "$eventtime"}}
+                        }
+                    }
+                }
+            },
+            {
+                "$group": {
+                    "_id": {
+                        "hourly_eventtime": "$hourly_eventtime",
+                        "useridentity_username": "$useridentity_username",
+                        "eventname": "$eventname",
+                        "eventsource": "$eventsource",
+                        "time_detection": "$time_detection",
+                        "ip_detection": "$ip_detection"
+                    },
+                    "count": {"$sum": 1},  # 그룹 내의 문서 수 계산
+                    "latest_time": {"$max": "$eventtime"},
+                    "unique_awsregion": {"$addToSet": "$awsregion"},
+                    "unique_sourceipaddress": {"$addToSet": "$sourceipaddress"}
+                }
+            },
+            {
+                "$match": {
+                    "count": {"$gt": 1}  # 그룹 내에 2개 이상의 문서가 있는 그룹 필터링
+                }
+            },
+            {
+                "$project": {
+                    "_id": 0,
+                    "hourly_eventtime": "$_id.hourly_eventtime",
+                    "useridentity_username": "$_id.useridentity_username",
+                    "eventname": "$_id.eventname",
+                    "eventsource": "$_id.eventsource",
+                    "time_detection": "$_id.time_detection",
+                    "ip_detection": "$_id.ip_detection",
+                    "count": 1,
+                    "latest_time": 1,
+                    "unique_awsregion":  {"$setUnion": ["$unique_awsregion", []]},
+                    "unique_sourceipaddress":  {"$setUnion": ["$unique_sourceipaddress", []]}
+                }
+            },
+            {
+                "$sort": {"latest_time": -1}  # latest_time을 내림차순으로 정렬
+            }
+        ]
+        result = await collection.aggregate(pipeline).to_list(None)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    res_json = {"alert_list": bson_to_json(result)}
+
+    return JSONResponse(content=res_json, status_code=200)
