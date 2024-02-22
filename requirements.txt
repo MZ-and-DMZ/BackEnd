@@ -9,7 +9,5 @@ pandas
 google-api-python-client
 google-cloud-iam
 google-cloud-resource-manager
-google-auth
-google-auth-httplib2
 google-auth-oauthlib
 google-cloud-logging
