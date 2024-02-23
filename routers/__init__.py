@@ -13,6 +13,7 @@ from .position.router import router as position_router
 from .recommend.router import router as recommend_router
 from .user.router import router as user_router
 from .anomaly_detection.router import router as anomaly_detection_router
+from .keycloak.router import router as keycloak_router
 
 routers = [
     aws_router,
@@ -30,4 +31,5 @@ routers = [
     recommend_router,
     user_router,
     anomaly_detection_router,
+    keycloak_router
 ]

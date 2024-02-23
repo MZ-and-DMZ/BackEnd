@@ -13,10 +13,10 @@ from collections import OrderedDict
 import csv
 import json
 
-
 gcp_credentials = service_account.Credentials.from_service_account_info(
     settings.get("gcp_credentials"), scopes=["https://www.googleapis.com/auth/cloud-platform"]
 )
+
 gcp_project_id = settings["gcp_credentials"]["project_id"]
 gcp_organization_id = settings["gcp_organization_id"]
 
