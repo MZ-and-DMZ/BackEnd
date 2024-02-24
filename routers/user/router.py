@@ -6,8 +6,8 @@ from fastapi.responses import JSONResponse
 
 from src.aws_policy_control import attach_policy, detach_policy
 from src.database import mongodb
-from src.utils import bson_to_json
 from src.mfa_request import send_slack_message
+from src.utils import bson_to_json
 
 from .schemas import *
 
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 async def list_user():
     collection = mongodb.db["users"]
     aws_users_collection = mongodb.db["awsUsers"]
-
+    aws_kms_collection = mongodb.db["awsKms"]
     try:
         user_list = await collection.find({"isRetire": False}).to_list(None)
     except Exception as e:
@@ -26,6 +26,18 @@ async def list_user():
 
     for user in user_list:
         aws_data = await aws_users_collection.find_one({"UserName": user["awsAccount"]})
+        for key in aws_data["managedKeys"]:
+            key_data = await aws_kms_collection.find_one({"_id": key})
+            key_data["keyId"] = key_data.pop("_id")
+            key_data.pop("adminstrators")
+            key_data.pop("users")
+            key = key_data
+        for key in aws_data["usedKeys"]:
+            key_data = await aws_kms_collection.find_one({"_id": key})
+            key_data["keyId"] = key_data.pop("_id")
+            key_data.pop("adminstrators")
+            key_data.pop("users")
+            key = key_data
         user["awsAccount"] = aws_data
         user["userName"] = user.pop("_id")
 
