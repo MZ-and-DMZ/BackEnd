@@ -21,29 +21,27 @@ async def list_user():
     aws_kms_collection = mongodb.db["awsKms"]
     try:
         user_list = await collection.find({"isRetire": False}).to_list(None)
-
-        for user in user_list:
-            aws_data = await aws_users_collection.find_one(
-                {"UserName": user["awsAccount"]}
-            )
-            if aws_data["managedKeys"]:
-                for key in aws_data["managedKeys"]:
-                    key_data = await aws_kms_collection.find_one({"_id": key})
-                    key_data["keyId"] = key_data.pop("_id")
-                    key_data.pop("administrators")
-                    key_data.pop("users")
-                    key = key_data
-            if aws_data["usedKeys"]:
-                for key in aws_data["usedKeys"]:
-                    key_data = await aws_kms_collection.find_one({"_id": key})
-                    key_data["keyId"] = key_data.pop("_id")
-                    key_data.pop("administrators")
-                    key_data.pop("users")
-                    key = key_data
-            user["awsAccount"] = aws_data
-            user["userName"] = user.pop("_id")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    for user in user_list:
+        print(user["awsAccount"])
+        aws_data = await aws_users_collection.find_one({"UserName": user["awsAccount"]})
+        if aws_data.get("managedKeys"):
+            for i, key in enumerate(aws_data["managedKeys"]):
+                key_data = await aws_kms_collection.find_one({"_id": key})
+                key_data["keyId"] = key_data.pop("_id")
+                key_data.pop("administrators")
+                key_data.pop("users")
+                aws_data["managedKeys"][i] = key_data
+        if aws_data.get("usedKeys"):
+            for i, key in enumerate(aws_data["usedKeys"]):
+                key_data = await aws_kms_collection.find_one({"_id": key})
+                key_data["keyId"] = key_data.pop("_id")
+                key_data.pop("administrators")
+                key_data.pop("users")
+                aws_data["usedKeys"][i] = key_data
+        user["awsAccount"] = aws_data
+        user["userName"] = user.pop("_id")
 
     res_json = {"user_list": bson_to_json(user_list)}
 
