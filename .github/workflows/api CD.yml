@@ -22,7 +22,7 @@ jobs:
         script_stop: true
         script: |
           cd BackEnd
-          git pull --rebase
+          git pull
           pip install -r requirements.txt
           if sudo netstat -tuln | grep -q ':8080 '; then
             echo "server reload"
