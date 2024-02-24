@@ -26,18 +26,20 @@ async def list_user():
             aws_data = await aws_users_collection.find_one(
                 {"UserName": user["awsAccount"]}
             )
-            for key in aws_data["managedKeys"]:
-                key_data = await aws_kms_collection.find_one({"_id": key})
-                key_data["keyId"] = key_data.pop("_id")
-                key_data.pop("administrators")
-                key_data.pop("users")
-                key = key_data
-            for key in aws_data["usedKeys"]:
-                key_data = await aws_kms_collection.find_one({"_id": key})
-                key_data["keyId"] = key_data.pop("_id")
-                key_data.pop("administrators")
-                key_data.pop("users")
-                key = key_data
+            if aws_data["managedKeys"]:
+                for key in aws_data["managedKeys"]:
+                    key_data = await aws_kms_collection.find_one({"_id": key})
+                    key_data["keyId"] = key_data.pop("_id")
+                    key_data.pop("administrators")
+                    key_data.pop("users")
+                    key = key_data
+            if aws_data["usedKeys"]:
+                for key in aws_data["usedKeys"]:
+                    key_data = await aws_kms_collection.find_one({"_id": key})
+                    key_data["keyId"] = key_data.pop("_id")
+                    key_data.pop("administrators")
+                    key_data.pop("users")
+                    key = key_data
             user["awsAccount"] = aws_data
             user["userName"] = user.pop("_id")
     except Exception as e:
