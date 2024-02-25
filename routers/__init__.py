@@ -14,6 +14,8 @@ from .recommend.router import router as recommend_router
 from .user.router import router as user_router
 from .anomaly_detection.router import router as anomaly_detection_router
 from .keycloak.router import router as keycloak_router
+from .windows_ad.router import router as windows_ad_router
+
 
 routers = [
     aws_router,
@@ -31,5 +33,6 @@ routers = [
     recommend_router,
     user_router,
     anomaly_detection_router,
-    keycloak_router
+    keycloak_router,
+    windows_ad_router
 ]
