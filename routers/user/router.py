@@ -24,7 +24,6 @@ async def list_user():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     for user in user_list:
-        print(user["awsAccount"])
         aws_data = await aws_users_collection.find_one({"UserName": user["awsAccount"]})
         if aws_data.get("managedKeys"):
             for i, key in enumerate(aws_data["managedKeys"]):
